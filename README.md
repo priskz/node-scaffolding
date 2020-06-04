@@ -1,5 +1,11 @@
 # new-app
 
+## Local Environment
+
+Uses Docker
+
+Via terminal navigate to `/docker` in the project root and run `docker-compose up -d`
+
 ## Application Structure
 
 ```
