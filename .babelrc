@@ -1,0 +1,27 @@
+{
+	"presets": ["@babel/env", "@babel/typescript"],
+	"plugins": [
+		"@babel/proposal-object-rest-spread",
+		"@babel/plugin-transform-runtime",
+		["@babel/plugin-proposal-decorators", { "legacy": true }],
+		"@babel/proposal-class-properties",
+		[
+			"module-resolver",
+			{
+				"root": ["./src/"],
+				"alias": {
+					"~": "./src"
+				},
+				"extensions": [".ts"]
+			}
+		]
+	],
+	"ignore": ["src/**/*.spec.ts"],
+	"env": {
+		"production": {},
+		"development": {
+			"sourceMaps": "inline",
+			"retainLines": true
+		}
+	}
+}

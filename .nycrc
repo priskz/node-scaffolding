@@ -1,0 +1,21 @@
+{
+	"include": [
+		"src/**/*.ts"
+	],
+	"exclude": [
+		"src/test/**/*",
+		"src/**/*.spec.ts",
+		"src/**/index.ts",
+		"src/migration",
+		"src/routes/**/*"
+	],
+	"extension": [
+		".ts"
+	],
+	"require": [
+		"ts-node/register"
+	],
+	"sourceMap": true,
+	"instrument": true,
+	"all": true
+}

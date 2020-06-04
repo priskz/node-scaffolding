@@ -1,0 +1,12 @@
+{
+	"exec": "ts-node -r tsconfig-paths/register ./src/server.ts",
+	"restartable": "rs",
+	"colors": true,
+	"verbose": false,
+	"watch": ["src", "src/**/*.spec.ts", ".env"],
+	"env": {
+		"NODE_ENV": "development"
+	},
+	"ext": "ts,js,json",
+	"ignore": []
+}

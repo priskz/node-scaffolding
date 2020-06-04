@@ -1,0 +1,16 @@
+{
+	"recommendations": [
+		"aaron-bond.better-comments",
+		"naumovs.color-highlight",
+		"ms-azuretools.vscode-docker",
+		"mikestead.dotenv",
+		"dbaeumer.vscode-eslint",
+		"eg2.vscode-npm-script",
+		"christian-kohler.npm-intellisense",
+		"esbenp.prettier-vscode",
+		"mohsen1.prettify-json",
+		"mechatroner.rainbow-csv",
+		"wayou.vscode-todo-highlight",
+		"redhat.vscode-yaml"
+	]
+}

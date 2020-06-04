@@ -1,0 +1,12 @@
+/node_modules
+/dist
+/log/*
+
+# Testing-related
+/.nyc_output
+/coverage
+/.VSCodeCounter
+
+.env*
+!.env.example
+!.env.prod-example
