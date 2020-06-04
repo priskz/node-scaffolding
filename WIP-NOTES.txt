@@ -2,4 +2,3 @@
 "@types/tough-cookie": "^2.3.6", - Dont need?
 "cookie-signature": "^1.1.0", - Dont need?
 "tough-cookie": "^3.0.1", - Dont need?
-"ts-mocha": "^6.0.0", - Needed?
