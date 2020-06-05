@@ -21,9 +21,6 @@ const instance: Express = express()
  * Run Application
  */
 async function run(): Promise<Express> {
-	// Temp
-	log.info('ENV', [process.env.NODE_ENV, config.app.env, env('NODE_ENV')])
-
 	// Connect database
 	await database.connect(config.db)
 
