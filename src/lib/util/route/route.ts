@@ -49,7 +49,7 @@ function _parseHandler(handler: RequestHandler, sync = false): RequestHandler {
 function register(
 	router: Router,
 	routes: RouteConfig[] | RouteConfig,
-	base: string = ''
+	base = ''
 ): void {
 	// Convert single route to array
 	if (!Array.isArray(routes)) {
@@ -85,7 +85,7 @@ interface Route {
 	register: (
 		router: Router,
 		routes: RouteConfig[] | RouteConfig,
-		base: string
+		base?: string
 	) => void
 }
 
