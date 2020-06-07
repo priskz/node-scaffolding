@@ -1,4 +1,4 @@
-# new-app
+# node-scaffolding
 
 ## Local Environment
 

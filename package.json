@@ -1,10 +1,10 @@
 {
-	"name": "new-app",
+	"name": "node-scaffolding",
 	"version": "0.0.1",
-	"description": "API Backend",
+	"description": "Generic application scaffolding built with TypeScript, Node, and Express",
 	"author": "Zachary Prisk",
 	"license": "UNLICENSED",
-	"private": true,
+	"private": false,
 	"main": "dist/server.js",
 	"scripts": {
 		"build": "npm-run-all clean type-check compile",
@@ -97,5 +97,9 @@
 		"ts-node": "^8.10.2",
 		"tsconfig-paths": "^3.9.0",
 		"typescript": "^3.9.3"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/priskz/node-scaffolding"
 	}
 }
