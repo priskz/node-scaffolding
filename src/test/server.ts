@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './env'
 import { Server, createServer } from 'http'
 import { env } from '~/lib/util'
 import { app } from '~/app'

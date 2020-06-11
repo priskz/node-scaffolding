@@ -5,7 +5,7 @@ import express, { Express } from 'express'
 import { config } from '~/config'
 import { exception } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, env, log } from '~/lib/util'
+import { cache, database, log } from '~/lib/util'
 
 /*
  * Initialize Logging
