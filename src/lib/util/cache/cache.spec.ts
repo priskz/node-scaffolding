@@ -1,3 +1,4 @@
+import { expect } from 'chai'
 import { cache } from './'
 import { Client } from './'
 
@@ -10,7 +11,7 @@ describe('util/cache', () => {
 			const result = await cache.connect()
 
 			// Assertions
-			result.should.be.true
+			expect(result).to.be.true
 		})
 	})
 
@@ -20,7 +21,7 @@ describe('util/cache', () => {
 			const result = await cache.disconnect()
 
 			// Assertions
-			result.should.be.true
+			expect(result).to.be.true
 		})
 	})
 
@@ -30,7 +31,7 @@ describe('util/cache', () => {
 			const result = cache.client()
 
 			// Assertions
-			result.should.be.instanceOf(Client)
+			expect(result).to.be.instanceOf(Client)
 		})
 	})
 })

@@ -50,10 +50,7 @@ export class DefaultCache {
 	/*
 	 * Set an item in cache
 	 */
-	public async set(
-		id: string | number,
-		data: unknown
-	): Promise<string | undefined> {
+	public async set(id: string | number, data: unknown): Promise<boolean> {
 		// Init _client value
 		let value = typeof data === 'string' ? data : ''
 
@@ -65,12 +62,15 @@ export class DefaultCache {
 			try {
 				value = JSON.stringify(data)
 			} catch (error) {
-				// If unable stringify, do not _client
-				console.error('DefaultCache unable to JSON.stringify: ', {
-					value,
-					error
-				})
-				return
+				if (process.env.DEBUG_MODE === 'true') {
+					// Log
+					console.error('DefaultCache unable to JSON.stringify: ', {
+						value,
+						error
+					})
+				}
+
+				return false
 			}
 		}
 
@@ -123,6 +123,43 @@ export class DefaultCache {
 
 		// Retrieve value
 		return await this._client.remove(this.parseKey(id))
+	}
+
+	/*
+	 * Retrieve keys in configured bucket matching prefix
+	 */
+	public async keys(): Promise<string[]> {
+		// Set the bucket
+		await this._client.selectBucket(this.bucket)
+
+		// Retrieve value
+		return await this._client.keys(`${this.parseKey('')}*`)
+	}
+
+	/*
+	 * Flush all keys for configured bucket & prefix by default unless given pattern
+	 */
+	public async flush(pattern?: string): Promise<boolean> {
+		// Set the bucket
+		await this._client.selectBucket(this.bucket)
+
+		// Init
+		let keys: string[] = []
+
+		// Pattern given?
+		if (pattern) {
+			// Get keys by pattern
+			keys = await this._client.keys(pattern)
+		} else {
+			// Get keys by class configuration
+			keys = await this.keys()
+		}
+
+		// Nothing to remove
+		if (keys.length < 1) return true
+
+		// Remove all at once
+		return await this._client.remove(keys)
 	}
 
 	/*

@@ -1,41 +1,58 @@
 import { promisify } from 'es6-promisify'
 import { ClientOpts, RedisClient } from 'redis'
 
+/*
+ * Default Client Options
+ */
+const defaultOptions: ClientOpts = {
+	host: '127.0.0.1',
+	port: 6379,
+	db: 0,
+	return_buffers: false,
+	detect_buffers: false,
+	socket_keepalive: true,
+	socket_initial_delay: 0,
+	no_ready_check: false,
+	enable_offline_queue: true,
+	retry_unfulfilled_commands: false,
+	rename_commands: null,
+	tls: null,
+	family: 'IPv4',
+	path: undefined,
+	url: undefined,
+	string_numbers: undefined,
+	password: undefined,
+	prefix: undefined
+}
+
 export class Client {
 	/*
 	 * Internal Client
 	 */
 	private _client: RedisClient
 
+	/**
+	 * Throw Exceptions
+	 */
+	private _throws = false
+
 	/*
 	 * Constructor
 	 */
-	constructor(option: ClientOptions = {}) {
-		// Override default options
-		const options: ClientOpts = {
-			host: '127.0.0.1',
-			port: 6379,
-			db: 0,
-			return_buffers: false,
-			detect_buffers: false,
-			socket_keepalive: true,
-			socket_initial_delay: 0,
-			no_ready_check: false,
-			enable_offline_queue: true,
-			retry_unfulfilled_commands: false,
-			rename_commands: null,
-			tls: null,
-			family: 'IPv4',
-			path: undefined,
-			url: undefined,
-			string_numbers: undefined,
-			password: undefined,
-			prefix: undefined,
-			...option
-		}
+	constructor(option: ClientOptions = {}, client?: RedisClient) {
+		// Use client if given.
+		if (client) {
+			this._client = client
+		} else {
+			// Override default options
+			const options: ClientOpts = {
+				...defaultOptions,
+				...option
+			}
 
-		// Set client
-		this._client = new RedisClient(options)
+			// Set client
+			this._client = new RedisClient(options)
+		}
 
 		// Debug Mode?
 		if (process.env.DEBUG_MODE === 'true') {
@@ -67,6 +84,20 @@ export class Client {
 	}
 
 	/*
+	 * Set throw property
+	 */
+	public setThrows(value: boolean): void {
+		this._throws = value
+	}
+
+	/*
+	 * Get throw property
+	 */
+	public getThrows(): boolean {
+		return this._throws
+	}
+
+	/**
 	 * Set a cache value
 	 */
 	public async set(
@@ -74,27 +105,53 @@ export class Client {
 		value: string,
 		mode?: string,
 		duration?: number
-	): Promise<string | undefined> {
+	): Promise<boolean> {
+		// Init
+		let setAsync
+		let result
+
+		// Optional params set?
 		if (mode && duration) {
-			const setAsync = promisify(this._client.set).bind(this._client) as (
+			setAsync = promisify(this._client.set).bind(this._client) as (
 				key: string,
 				value: string,
 				mode: string,
 				duration: number
 			) => Promise<string | undefined>
 
-			return await setAsync(key, value, mode, duration)
+			// Execute function
+			result = await setAsync(key, value, mode, duration).catch(e => {
+				// Log
+				if (process.env.DEBUG_MODE === 'true') {
+					console.error(`Cache Client Exception: ${e.toString()}`)
+				}
+
+				// Bail on fail?
+				if (this._throws) throw e
+			})
 		} else {
-			const setAsync = promisify(this._client.set).bind(this._client) as (
+			setAsync = promisify(this._client.set).bind(this._client) as (
 				key: string,
 				value: string
 			) => Promise<string | undefined>
 
-			return await setAsync(key, value)
+			// Execute function
+			result = await setAsync(key, value).catch(e => {
+				// Log
+				if (process.env.DEBUG_MODE === 'true') {
+					console.error(`Cache Client Exception: ${e.toString()}`)
+				}
+
+				// Bail on fail?
+				if (this._throws) throw e
+			})
 		}
+
+		// Return
+		return result === 'OK'
 	}
 
-	/*
+	/**
 	 * Get a cache value
 	 */
 	public async get(key: string): Promise<string | null> {
@@ -104,11 +161,27 @@ export class Client {
 			key: string
 		) => Promise<string | null>
 
-		return await getAsync(key)
+		// Execute function
+		const result = await getAsync(key).catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+
+			//
+			return null
+		})
+
+		// Return bool
+		return result
 	}
 
-	/*
-	 * Get all cached keys
+	/**
+	 * Get cached keys by given param
+	 * Note '*' is a wildcard and will return all bucket keys if by itself
 	 */
 	public async keys(pattern: string): Promise<string[]> {
 		// Note: V4 of node/redis will include async functions
@@ -117,37 +190,82 @@ export class Client {
 			pattern: string
 		) => Promise<string[]>
 
-		return await keysAsync(pattern)
+		// Execute function
+		const result = await keysAsync(pattern).catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+
+			// Empty
+			return []
+		})
+
+		// Return
+		return result
 	}
 
-	/*
-	 * Delete/remove a cache key-value-pair
+	/**
+	 * Delete/remove cache key-value-pair(s)
 	 */
-	public async remove(key: string): Promise<boolean> {
+	public async remove(key: string | string[]): Promise<boolean> {
 		// Note: V4 of node/redis will include async functions
 		// Wrap client's method with promise and call immediately
 		const delAsync = promisify(this._client.del).bind(this._client) as (
-			key: string
+			key: string | string[]
 		) => Promise<number>
 
-		return (await delAsync(key)) === 1
+		// Execute function
+		const result = await delAsync(key).catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+
+			// Failed
+			return false
+		})
+
+		// Return true if any removed, partial or all
+		return result > 0
 	}
 
-	/*
+	/**
 	 * Set many values in  cache
 	 * example: ['key1', 'value1', 'key2', 'value2', 'etcKey', 'etcValue']
 	 */
-	public async setMany(keyValuePairs: string[]): Promise<unknown> {
+	public async setMany(keyValuePairs: string[]): Promise<boolean> {
 		// Note: V4 of node/redis will include async functions
 		// Wrap client's method with promise and call immediately
 		const msetAsync = promisify(this._client.mset).bind(this._client) as (
 			keyValuePairs: string[]
-		) => Promise<unknown>
+		) => Promise<boolean>
 
-		return await msetAsync(keyValuePairs)
+		// Execute function
+		const result = await msetAsync(keyValuePairs).catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+
+			// Failed
+			return false
+		})
+
+		// Return
+		return result
 	}
 
-	/*
+	/**
 	 * Get many values from cache
 	 */
 	public async getMany(keys: string[]): Promise<string[]> {
@@ -157,10 +275,25 @@ export class Client {
 			keys: string[]
 		) => Promise<string[]>
 
-		return await mgetAsync(keys)
+		// Execute function
+		const result = await mgetAsync(keys).catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+
+			// Empty
+			return []
+		})
+
+		// Return
+		return result
 	}
 
-	/*
+	/**
 	 * Flush ALL key-value-pairs in ALL buckets
 	 */
 	public async flushAll(): Promise<boolean> {
@@ -168,25 +301,49 @@ export class Client {
 		// Wrap client's method with promise and call immediately
 		const flushallAsync = promisify(this._client.flushall).bind(
 			this._client
-		) as () => Promise<boolean>
+		) as () => Promise<string>
 
-		return await flushallAsync()
+		// Execute function
+		const result = await flushallAsync().catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+		})
+
+		// Return bool
+		return result === 'OK'
 	}
 
-	/*
+	/**
 	 * Select cache database/bucket
 	 */
-	public async selectBucket(bucket: number | string): Promise<unknown> {
+	public async selectBucket(bucket: number | string): Promise<boolean> {
 		// Note: V4 of node/redis will include async functions
 		// Wrap client's method with promise and call immediately
 		const selectAsync = promisify(this._client.select).bind(this._client) as (
 			bucket: number | string
-		) => Promise<unknown>
+		) => Promise<string>
 
-		return await selectAsync(bucket)
+		// Execute function
+		const result = await selectAsync(bucket).catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+		})
+
+		// Return bool
+		return result === 'OK'
 	}
 
-	/*
+	/**
 	 * Flush / clear all key-value-pairs in active bucket
 	 */
 	public async dumpBucket(): Promise<boolean> {
@@ -194,25 +351,54 @@ export class Client {
 		// Wrap client's method with promise and call immediately
 		const flushdbAsync = promisify(this._client.flushdb).bind(
 			this._client
-		) as () => Promise<boolean>
+		) as () => Promise<string>
 
-		return await flushdbAsync()
+		// Execute function
+		const result = await flushdbAsync().catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+		})
+
+		// Return bool
+		return result === 'OK'
 	}
 
-	/*
+	/**
 	 * Duplicate Client w/new Connection
 	 */
-	public async duplicate(arg1: ClientOpts | undefined): Promise<RedisClient> {
+	public async duplicate(options?: ClientOpts): Promise<Client> {
+		// Override config values
+		const config: ClientOpts = {
+			...options
+		}
+
 		// Note: V4 of node/redis will include async functions
 		// Wrap client's method with promise and call immediately
 		const duplicateAsync = promisify(this._client.duplicate).bind(
 			this._client
-		) as (arg1: ClientOpts | undefined) => Promise<RedisClient>
+		) as (config: ClientOpts | undefined) => Promise<RedisClient>
 
-		return await duplicateAsync(arg1)
+		// Execute function
+		const client = await duplicateAsync(config).catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Rethrow, bigger issue here.
+			throw e
+		})
+
+		// Return Client
+		return new Client({}, client)
 	}
 
-	/*
+	/**
 	 * Disconnect Client
 	 */
 	public async disconnect(): Promise<boolean> {
@@ -220,31 +406,46 @@ export class Client {
 		// Wrap client's method with promise and call immediately
 		const quitAsync = promisify(this._client.quit).bind(
 			this._client
-		) as () => Promise<unknown>
+		) as () => Promise<string>
 
-		// Return truthy, OK is expected success value
-		return (await quitAsync()) === 'OK'
+		// Execute function
+		const result = await quitAsync().catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.error(`Cache Client Exception: ${e.toString()}`)
+			}
+
+			// Bail on fail?
+			if (this._throws) throw e
+		})
+
+		// Return bool
+		return result === 'OK'
 	}
 
-	/*
+	/**
 	 * Is client currently connected?
 	 */
-	public connected = async (): Promise<boolean> => {
-		// Init
-		let isConnected = false
+	public async connected(): Promise<boolean> {
+		// Note: V4 of node/redis will include async functions
+		// Wrap client's method with promise and call immediately
+		const pingAsync = promisify(this._client.ping).bind(
+			this._client
+		) as () => Promise<string>
 
-		try {
-			// Attempt to add & add value
-			await this.set('isConnected', 'true')
-			await this.remove('isConnected')
+		// Execute function
+		const connected = await pingAsync().catch(e => {
+			// Log
+			if (process.env.DEBUG_MODE === 'true') {
+				console.info(`Cache Client Exception: ${e.toString()}`)
+			}
 
-			// No error?
-			isConnected = true
-		} catch (error) {
-			isConnected = false
-		}
+			// Bail on fail?
+			if (this._throws) throw e
+		})
 
-		return isConnected
+		// Return bool
+		return connected === 'PONG'
 	}
 }
 

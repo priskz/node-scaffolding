@@ -4,9 +4,18 @@ import { DefaultCache } from './'
 
 //----- Tests -----//
 
-describe('src/util/cache/DefaultCache', () => {
+describe('src/lib/util/cache/DefaultCache', () => {
 	// Test Subject
 	let defaultCache: DefaultCache
+
+	// Test bucket
+	const testBucket = 13
+
+	// Test Prefix
+	const testPrefix = 'unit-test'
+
+	// Test time to live
+	const testTtl = 100
 
 	// Simple test object
 	const simpleObject: SimpleObject = {
@@ -20,6 +29,9 @@ describe('src/util/cache/DefaultCache', () => {
 	}
 
 	after(async () => {
+		// Clean up
+		await defaultCache.client().dumpBucket()
+
 		// Disconnect client if isn't already
 		await defaultCache.client().disconnect()
 	})
@@ -30,7 +42,7 @@ describe('src/util/cache/DefaultCache', () => {
 			defaultCache = new DefaultCache()
 
 			// Assertions
-			defaultCache.should.be.an.instanceOf(DefaultCache)
+			expect(defaultCache).to.be.an.instanceOf(DefaultCache)
 		})
 	})
 
@@ -40,7 +52,59 @@ describe('src/util/cache/DefaultCache', () => {
 			const result = defaultCache.client()
 
 			// Assertions
-			result.should.be.an.instanceOf(Client)
+			expect(result).to.be.an.instanceOf(Client)
+		})
+	})
+
+	describe('setBucket && getBucket methods', () => {
+		it('should set/get bucket property to value given', async () => {
+			// Set value
+			defaultCache.setBucket(testBucket)
+
+			// Test
+			const result = defaultCache.getBucket()
+
+			// Assertions
+			expect(result).to.equal(testBucket)
+		})
+	})
+
+	describe('setPrefix && getPrefix methods', () => {
+		it('should set/get bucket property to value given', async () => {
+			// Set value
+			defaultCache.setPrefix(testPrefix)
+
+			// Test
+			const result = defaultCache.getPrefix()
+
+			// Assertions
+			expect(result).to.equal(testPrefix)
+		})
+	})
+
+	describe('setTtl && getTtl methods', () => {
+		it('should set/get ttl property to value given', async () => {
+			// Set value
+			defaultCache.setTtl(testTtl)
+
+			// Test
+			const result = defaultCache.getTtl()
+
+			// Assertions
+			expect(result).to.equal(testTtl)
+		})
+	})
+
+	describe('parseKey method', () => {
+		it('should return predictably formatted cache key', async () => {
+			// Test value
+			const key = 12345
+
+			// Test
+			const result = defaultCache.parseKey(key)
+
+			// Assertions
+			expect(result).to.equal(`${testPrefix}:${key}`)
 		})
 	})
 
@@ -74,68 +138,101 @@ describe('src/util/cache/DefaultCache', () => {
 			const result = await defaultCache.remove(simpleObject.id)
 
 			// Assertions
-			result.should.be.true
+			expect(result).to.be.true
 		})
 	})
 
-	describe('setTtl && getTtl methods', () => {
-		it('should set/get ttl property to value given', async () => {
-			// Test value
-			const ttl = 100
+	describe('keys method', () => {
+		it('should return all keys by default with given prefix and pattern', async () => {
+			// Test Data
+			const data = [
+				{
+					id:
+						'test-' +
+						Math.random()
+							.toString(36)
+							.substring(2, 15),
+					firstName: 'keys',
+					lastName: 'test'
+				},
+				{
+					id:
+						'test-' +
+						Math.random()
+							.toString(36)
+							.substring(2, 15),
+					firstName: 'keys',
+					lastName: 'test'
+				}
+			]
 
-			// Set value
-			defaultCache.setTtl(ttl)
+			// Add data
+			await defaultCache.set('1', data[0])
+			await defaultCache.set('2', data[1])
 
 			// Test
-			const result = defaultCache.getTtl()
+			const result1 = await defaultCache.keys()
+			const result2 = await defaultCache.get<SimpleObject>('1')
+			const result3 = await defaultCache.get<SimpleObject>('2')
 
 			// Assertions
-			result.should.equal(ttl)
+			expect(result1.length).to.equal(data.length)
+			expect(result2)
+				.to.have.property('id')
+				.equal(data[0].id)
+			expect(result3)
+				.to.have.property('id')
+				.equal(data[1].id)
 		})
 	})
 
-	describe('setBucket && getBucket methods', () => {
-		it('should set/get bucket property to value given', async () => {
-			// Test value
-			const bucket = 8
+	describe('flush method', () => {
+		it('should remove all key-value-pairs based on prefix & bucket property', async () => {
+			// Set prefix for this test
+			defaultCache.setPrefix('FLUSHTEST')
 
-			// Set value
-			defaultCache.setBucket(bucket)
+			// Add data
+			await defaultCache.set('1', 'FLUSHTESTVALUE1')
+			await defaultCache.set('2', 'FLUSHTESTVALUE2')
+
+			// Count keys pre test
+			const result1 = await defaultCache.keys()
 
 			// Test
-			const result = defaultCache.getBucket()
+			const result2 = await defaultCache.flush()
+
+			// Count keys post test
+			const result3 = await defaultCache.keys()
 
 			// Assertions
-			result.should.equal(bucket)
+			expect(result1.length).to.equal(2)
+			expect(result2).to.be.true
+			expect(result3.length).to.equal(0)
 		})
 	})
 
-	describe('parseKey method', () => {
-		it('should return predictably formatted cache key', async () => {
-			// Test value
-			const key = 1
+	describe('flush method w/optional pattern', () => {
+		it('should remove all key-value-pairs based on pattern given', async () => {
+			// Set prefix for this test
+			defaultCache.setPrefix('PATTERNTEST')
+
+			// Add data
+			await defaultCache.set('1', 'PATTERNTEST1')
+			await defaultCache.set('2', 'PATTERNTEST2')
+
+			// Count keys pre test
+			const result1 = await defaultCache.keys()
 
 			// Test
-			const result = defaultCache.parseKey(key)
+			const result2 = await defaultCache.flush('*PATTERNTEST*')
+
+			// Count keys post test
+			const result3 = await defaultCache.keys()
 
 			// Assertions
-			result.should.equal('1')
-		})
-	})
-
-	describe('setPrefix && getPrefix methods', () => {
-		it('should set/get bucket property to value given', async () => {
-			// Test value
-			const prefix = 'unit-test'
-
-			// Set value
-			defaultCache.setPrefix(prefix)
-
-			// Test
-			const result = defaultCache.getPrefix()
-
-			// Assertions
-			result.should.equal(prefix)
+			expect(result1.length).to.equal(2)
+			expect(result2).to.be.true
+			expect(result3.length).to.equal(0)
 		})
 	})
 })

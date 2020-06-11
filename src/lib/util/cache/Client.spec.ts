@@ -25,6 +25,10 @@ describe('src/lib/util/cache/Client', () => {
 	// Test Subject
 	let client: Client
 
+	// Cache DBs to use for testing
+	const testBucket1 = 14
+	const testBucket2 = 15
+
 	// Single KeyValuePair
 	const singlePair: KeyValuePair = {
 		key:
@@ -74,7 +78,7 @@ describe('src/lib/util/cache/Client', () => {
 			client = new Client(config)
 
 			// Assertions
-			client.should.be.an.instanceOf(Client)
+			expect(client).to.be.an.instanceOf(Client)
 		})
 	})
 
@@ -84,7 +88,7 @@ describe('src/lib/util/cache/Client', () => {
 			const result = await client.connected()
 
 			// Assertions
-			result.should.be.true
+			expect(result).to.be.true
 		})
 	})
 
@@ -133,12 +137,12 @@ describe('src/lib/util/cache/Client', () => {
 	})
 
 	describe('remove method', () => {
-		it('should remove key-value from cache and return 1', async () => {
+		it('should remove key-value from cache and return true', async () => {
 			// Test
 			const result = await client.remove(singlePair.key)
 
 			// Assertions
-			result.should.be.true
+			expect(result).to.be.true
 
 			// Clean up mulitpairs
 			for (let i = 0; i < multiplePairs.length; i++) {
@@ -146,29 +150,114 @@ describe('src/lib/util/cache/Client', () => {
 				const multiResult = await client.remove(multiplePairs[i].key)
 
 				// Assertions
-				multiResult.should.be.true
+				expect(multiResult).to.be.true
 			}
 		})
 	})
 
-	describe('flushAll method', () => {
-		it.skip('should remove all values in every bucket')
-	})
-
-	describe('dumpBucket method', () => {
-		it.skip('should remove all values in active bucket')
-	})
-
 	describe('selectBucket method', () => {
-		it.skip("should change the client's active bucket")
+		it("should change the client's active bucket", async () => {
+			// Test
+			const result = await client.selectBucket(testBucket2)
+
+			// Assertions
+			expect(result).to.be.true
+		})
 	})
 
 	describe('keys method', () => {
-		it.skip('should return an array of ALL keys (strings) in active bucket')
+		it('should return an array of ALL keys (strings) in active bucket', async () => {
+			// Mock data
+			const data = [
+				{ key: 'KEYSTEST:1', value: 'TEST1VALUE' },
+				{ key: 'KEYSTEST:2', value: 'TEST2VALUE' },
+				{ key: 'KEYSTEST:3', value: 'TEST3VALUE' },
+				{ key: 'KEYSTEST:4', value: 'TEST4VALUE' },
+				{ key: 'KEYSTEST:5', value: 'TEST5VALUE' }
+			]
+
+			// Keys to assert
+			const keys = []
+
+			// Set values in empty test bucket selected in prev test.
+			for (let i = 0; i < data.length; i++) {
+				keys.push(data[i].key)
+				await client.set(data[i].key, data[i].value)
+			}
+
+			// Test
+			const result = await client.keys('*')
+
+			// Assertions
+			expect(result).to.have.members(keys)
+		})
+	})
+
+	describe('dumpBucket method', () => {
+		it('should remove all values in active bucket', async () => {
+			// Test
+			const result1 = await client.keys('*')
+			const result2 = await client.dumpBucket()
+			const result3 = await client.keys('*')
+
+			// Assertions
+			expect(result1).to.not.be.empty
+			expect(result2).to.be.true
+			expect(result3).to.be.empty
+		})
+	})
+
+	describe('flushAll method', () => {
+		it('should remove all values in every bucket', async () => {
+			// Has 16 buckets with numerical index/name
+			const totalBuckets = 16
+
+			// Add data to ALL buckets
+			for (let i = 0; i < totalBuckets; i++) {
+				// Select
+				await client.selectBucket(i)
+
+				// Add
+				await client.set('FUSHALLTEST', 'FUSHALLTESTVALUE')
+			}
+
+			// Test
+			const result1 = await client.flushAll()
+
+			// Test
+			let result2 = true
+
+			// Make sure all buckets are empty
+			for (let i = 0; i < totalBuckets; i++) {
+				// Select
+				await client.selectBucket(i)
+
+				// Get all keys
+				const keys = await client.keys('*')
+
+				// Ensure empty
+				if (keys.length > 0) {
+					result2 = false
+				}
+			}
+
+			// Assertions
+			expect(result1).to.be.true
+			expect(result2).to.be.true
+		})
 	})
 
 	describe('duplicate method', () => {
-		it.skip('should an copy of the private _client property')
+		it('should an copy of the private _client property', async () => {
+			// Test
+			const result = await client.duplicate()
+
+			// Clean up
+			result.disconnect()
+
+			// Assertions
+			expect(result).to.be.an.instanceOf(Client)
+		})
 	})
 
 	describe('disconnect method', () => {
@@ -177,7 +266,40 @@ describe('src/lib/util/cache/Client', () => {
 			const result = await client.disconnect()
 
 			// Assertions
-			result.should.be.true
+			expect(result).to.be.true
+		})
+	})
+
+	describe('setThrows && getThrows methods', () => {
+		it('should set/get private thows property to value given', async () => {
+			// Set value
+			client.setThrows(true)
+
+			// Test
+			const result = client.getThrows()
+
+			// Assertions
+			expect(result).to.be.true
+		})
+	})
+
+	describe('when throws is set to true', () => {
+		it('should throw errors and NOT suppress them', async () => {
+			// Set value
+			client.setThrows(true)
+
+			// Test
+			let result = false
+
+			// Need exception for success
+			try {
+				await client.get('any-value')
+			} catch (e) {
+				result = true
+			}
+
+			// Assertions
+			expect(result).to.be.true
 		})
 	})
 })
