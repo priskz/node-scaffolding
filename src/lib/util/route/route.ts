@@ -94,6 +94,6 @@ export interface RouteConfig {
 	method: 'get' | 'post' | 'put' | 'delete'
 	handler: RequestHandler
 	middleware?: RequestHandler | RequestHandler[] | undefined
-	sync?: boolean
 	after?: RequestHandler | RequestHandler[] | undefined
+	sync?: boolean
 }
