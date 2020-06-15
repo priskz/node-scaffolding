@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import './env'
 import { Server, createServer } from 'http'
 import { env } from '~/lib/util'

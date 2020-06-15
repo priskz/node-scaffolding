@@ -1,3 +1,4 @@
+import { expect } from 'chai'
 import mocks from 'node-mocks-http'
 import { Responder } from './'
 
@@ -14,7 +15,7 @@ describe('util/Responder', () => {
 			const responder = new Responder(request, response)
 
 			// Assertions
-			responder.should.be.an.instanceOf(Responder)
+			expect(responder).to.be.an.instanceOf(Responder)
 		})
 	})
 
@@ -31,12 +32,12 @@ describe('util/Responder', () => {
 			responder.success()
 
 			// Assertions
-			response.statusCode.should.equal(204)
+			expect(response.statusCode).to.equal(204)
 		})
 	})
 
 	describe('when success is called WITH data', () => {
-		it('should create 200 response data in body', async () => {
+		it('should create 200 response with data', async () => {
 			// Mocks
 			const request = mocks.createRequest()
 			const response = mocks.createResponse()
@@ -51,8 +52,8 @@ describe('util/Responder', () => {
 			responder.success(data)
 
 			// Assertions
-			response.statusCode.should.equal(200)
-			response._getJSONData().testProp.should.equal(data.testProp)
+			expect(response.statusCode).to.equal(200)
+			expect(response._getJSONData().testProp).to.equal(data.testProp)
 		})
 	})
 
@@ -70,7 +71,7 @@ describe('util/Responder', () => {
 			responder.success(undefined, code)
 
 			// Assertions
-			response.statusCode.should.equal(code)
+			expect(response.statusCode).to.equal(code)
 		})
 	})
 
@@ -87,12 +88,12 @@ describe('util/Responder', () => {
 			responder.error()
 
 			// Assertions
-			response.statusCode.should.equal(400)
+			expect(response.statusCode).to.equal(400)
 		})
 	})
 
 	describe('when error is called WITH data', () => {
-		it('should create 400 response data in body', async () => {
+		it('should create 400 response with data', async () => {
 			// Mocks
 			const request = mocks.createRequest()
 			const response = mocks.createResponse()
@@ -107,8 +108,8 @@ describe('util/Responder', () => {
 			responder.error(data)
 
 			// Assertions
-			response.statusCode.should.equal(400)
-			response._getJSONData().testProp.should.equal(data.testProp)
+			expect(response.statusCode).to.equal(400)
+			expect(response._getJSONData().testProp).to.equal(data.testProp)
 		})
 	})
 
@@ -126,7 +127,7 @@ describe('util/Responder', () => {
 			responder.error(undefined, code)
 
 			// Assertions
-			response.statusCode.should.equal(code)
+			expect(response.statusCode).to.equal(code)
 		})
 	})
 
@@ -143,12 +144,12 @@ describe('util/Responder', () => {
 			responder.exception()
 
 			// Assertions
-			response.statusCode.should.equal(500)
+			expect(response.statusCode).to.equal(500)
 		})
 	})
 
 	describe('when exception is called WITH data', () => {
-		it('should create 500 response data in body', async () => {
+		it('should create 500 response with body', async () => {
 			// Mocks
 			const request = mocks.createRequest()
 			const response = mocks.createResponse()
@@ -163,8 +164,8 @@ describe('util/Responder', () => {
 			responder.exception(data)
 
 			// Assertions
-			response.statusCode.should.equal(500)
-			response._getJSONData().testProp.should.equal(data.testProp)
+			expect(response.statusCode).to.equal(500)
+			expect(response._getJSONData().testProp).to.equal(data.testProp)
 		})
 	})
 
@@ -182,7 +183,7 @@ describe('util/Responder', () => {
 			responder.exception(undefined, code)
 
 			// Assertions
-			response.statusCode.should.equal(code)
+			expect(response.statusCode).to.equal(code)
 		})
 	})
 
@@ -202,8 +203,8 @@ describe('util/Responder', () => {
 			responder.redirect(url)
 
 			// Assertions
-			response.statusCode.should.equal(302)
-			response.header('Location').should.equal(url)
+			expect(response.statusCode).to.equal(302)
+			expect(response.header('Location')).to.equal(url)
 		})
 	})
 
@@ -223,8 +224,8 @@ describe('util/Responder', () => {
 			responder.redirect(url, true)
 
 			// Assertions
-			response.statusCode.should.equal(301)
-			response.header('Location').should.equal(url)
+			expect(response.statusCode).to.equal(301)
+			expect(response.header('Location')).to.equal(url)
 		})
 	})
 
@@ -241,8 +242,8 @@ describe('util/Responder', () => {
 			responder.send(418)
 
 			// Assertions
-			response.statusCode.should.equal(418)
-			response._getData().should.be.empty
+			expect(response.statusCode).to.equal(418)
+			expect(response._getData()).to.be.empty
 		})
 	})
 
@@ -262,8 +263,8 @@ describe('util/Responder', () => {
 			responder.send(418, data)
 
 			// Assertions
-			response.statusCode.should.equal(418)
-			response._getJSONData().testProp.should.equal(data.testProp)
+			expect(response.statusCode).to.equal(418)
+			expect(response._getJSONData().testProp).to.equal(data.testProp)
 		})
 	})
 })

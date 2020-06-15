@@ -75,4 +75,16 @@ describe('util/env', () => {
 			expect(typeof result).to.equal('number')
 		})
 	})
+
+	describe('when ENV has boolean value and casted as bool', () => {
+		it('should return a boolean', async () => {
+			// Test
+			const result1 = env('TEST_ENV_BOOL_TRUE', undefined, 'bool')
+			const result2 = env('TEST_ENV_BOOL_FALSE', undefined, 'bool')
+
+			// Assertions
+			expect(result1).to.be.true
+			expect(result2).to.be.false
+		})
+	})
 })

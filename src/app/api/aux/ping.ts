@@ -9,13 +9,3 @@ export async function ping(
 	// Success
 	respond(req, res, next).success('PONG')
 }
-
-// Sync Example
-export const pingSync = function(
-	req: Request,
-	res: Response,
-	next: NextFunction
-): void {
-	// Success
-	respond(req, res, next).success('PONG SYNC')
-}

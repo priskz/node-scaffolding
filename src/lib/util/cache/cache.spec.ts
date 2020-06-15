@@ -25,6 +25,16 @@ describe('util/cache', () => {
 		})
 	})
 
+	describe('when disconnect function is called but already disconnected', () => {
+		it('should return false', async () => {
+			// Test
+			const result = await cache.disconnect()
+
+			// Assertions
+			expect(result).to.be.false
+		})
+	})
+
 	describe('when client function is called', () => {
 		it('should return global Client instance', async () => {
 			// Test

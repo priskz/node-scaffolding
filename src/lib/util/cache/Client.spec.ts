@@ -75,7 +75,7 @@ describe('src/lib/util/cache/Client', () => {
 	describe('constructor method', () => {
 		it('should create a new instance', async () => {
 			// Test
-			client = new Client(config)
+			client = new Client({ ...config, db: testBucket1 })
 
 			// Assertions
 			expect(client).to.be.an.instanceOf(Client)

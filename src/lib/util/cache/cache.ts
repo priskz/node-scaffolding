@@ -25,13 +25,12 @@ async function connect(options: ClientOptions = {}): Promise<boolean> {
  * Disconnect Client
  */
 async function disconnect(): Promise<boolean> {
-	// Need client to disconnect
-	if (instance) {
-		// Attempt disconnect
+	// Connected?
+	if (await instance.connected()) {
 		return await instance.disconnect()
 	}
 
-	// Can't disconnect non-existant client
+	// Already disconnected
 	return false
 }
 
