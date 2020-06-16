@@ -1,4 +1,4 @@
-import { LogConfig as BaseConfig, TransportTypeConfig } from '~/lib/util'
+import { LogConfig as BaseLogConfig, Transport } from '~/lib/util'
 
 export const log: LogConfig = {
 	default: {
@@ -30,13 +30,13 @@ export const log: LogConfig = {
 	}
 }
 
-export interface LogConfig extends BaseConfig {
+export interface LogConfig extends BaseLogConfig {
 	default: {
 		enable: boolean
-		transports: TransportTypeConfig[]
+		transports: Transport[]
 	}
 	cli: {
 		enable: boolean
-		transports: TransportTypeConfig[]
+		transports: Transport[]
 	}
 }

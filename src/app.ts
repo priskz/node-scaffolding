@@ -8,11 +8,6 @@ import { router } from '~/app/routes'
 import { cache, database, log } from '~/lib/util'
 
 /*
- * Initialize Logging
- */
-log.init(config.log)
-
-/*
  * Instantiate App Framework
  */
 const instance: Express = express()
@@ -21,6 +16,9 @@ const instance: Express = express()
  * Run Application
  */
 async function run(): Promise<Express> {
+	// Init app log
+	log.init(config.log)
+
 	// Connect database
 	await database.connect(config.db)
 
