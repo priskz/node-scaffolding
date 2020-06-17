@@ -55,7 +55,7 @@ describe('util/log', () => {
 			alert: 'TEST-ALERT-MESSAGE',
 			critical: 'TEST-CRITICAL-MESSAGE',
 			error: 'TEST-ERROR-MESSAGE',
-			warning: 'TEST-WARNING-MESSAGE',
+			warn: 'TEST-WARN-MESSAGE',
 			notice: 'TEST-NOTICE-MESSAGE',
 			info: 'TEST-INFO-MESSAGE',
 			debug: 'TEST-DEBUG-MESSAGE'
@@ -66,7 +66,7 @@ describe('util/log', () => {
 		log.alert(msg.alert)
 		log.critical(msg.critical)
 		log.error(msg.error)
-		log.warning(msg.warning)
+		log.warn(msg.warn)
 		log.notice(msg.notice)
 		log.info(msg.info)
 		log.debug(msg.debug)
@@ -92,9 +92,9 @@ describe('util/log', () => {
 			expect(fs.readFileSync(testFile, 'utf8')).to.include('<error>')
 		})
 
-		it('warning should log a message to file', async () => {
-			expect(fs.readFileSync(testFile, 'utf8')).to.include(msg.warning)
-			expect(fs.readFileSync(testFile, 'utf8')).to.include('<warning>')
+		it('warn should log a message to file', async () => {
+			expect(fs.readFileSync(testFile, 'utf8')).to.include(msg.warn)
+			expect(fs.readFileSync(testFile, 'utf8')).to.include('<warn>')
 		})
 
 		it('notice should log a message to file', async () => {

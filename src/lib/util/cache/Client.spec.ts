@@ -270,7 +270,7 @@ describe('src/lib/util/cache/Client', () => {
 		})
 	})
 
-	describe('setThrows && getThrows methods', () => {
+	describe('setThrows && getThrows methods', async () => {
 		it('should set/get private thows property to value given', async () => {
 			// Set value
 			client.setThrows(true)
@@ -283,23 +283,157 @@ describe('src/lib/util/cache/Client', () => {
 		})
 	})
 
-	describe('when throws is set to true', () => {
-		it('should throw errors and NOT suppress them', async () => {
+	describe('when throws is set to true && error occurs', async () => {
+		// Assertions
+		it('should throw error when set is called', async () => {
+			expect(async function() {
+				await client.set('key', 'value')
+			}).to.throw
+		})
+
+		it('should throw error when get is called', async () => {
+			expect(async function() {
+				await client.get('any-value')
+			}).to.throw
+		})
+
+		it('should throw error when keys is called', async () => {
+			expect(async function() {
+				await client.keys('*')
+			}).to.throw
+		})
+
+		it('should throw error when remove is called', async () => {
+			expect(async function() {
+				await client.remove('some-key')
+			}).to.throw
+		})
+
+		it('should throw error when remove is called', async () => {
+			expect(async function() {
+				await client.remove('some-key')
+			}).to.throw
+		})
+
+		it('should throw error when setMany is called', async () => {
+			expect(async function() {
+				await client.setMany(['key-1', 'value-1', 'key-2', 'value-2'])
+			}).to.throw
+		})
+
+		it('should throw error when getMany is called', async () => {
+			expect(async function() {
+				await client.getMany(['key-1', 'key-2'])
+			}).to.throw
+		})
+
+		it('should throw error when flushAll is called', async () => {
+			expect(async function() {
+				await client.flushAll()
+			}).to.throw
+		})
+
+		it('should throw error when selectBucket is called', async () => {
+			expect(async function() {
+				await client.selectBucket(4)
+			}).to.throw
+		})
+
+		it('should throw error when dumpBucket is called', async () => {
+			expect(async function() {
+				await client.dumpBucket()
+			}).to.throw
+		})
+
+		it('should throw error when duplicate is called', async () => {
+			expect(async function() {
+				await client.duplicate()
+			}).to.throw
+		})
+
+		it('should throw error when disconnect is called', async () => {
+			expect(async function() {
+				await client.disconnect()
+			}).to.throw
+		})
+
+		it('should throw error when connected is called', async () => {
+			expect(async function() {
+				await client.connected()
+			}).to.throw
+		})
+
+		after(async () => {
+			// Clean up
+			client.setThrows(false)
+		})
+	})
+
+	describe('setDebug && getDebug methods', async () => {
+		it('should set/get protected debug property to value given', async () => {
 			// Set value
-			client.setThrows(true)
+			client.setDebug(true)
 
 			// Test
-			let result = false
-
-			// Need exception for success
-			try {
-				await client.get('any-value')
-			} catch (e) {
-				result = true
-			}
+			const result = client.getDebug()
 
 			// Assertions
 			expect(result).to.be.true
+		})
+	})
+
+	describe('when debug is set to true', async () => {
+		// Assertions
+		it('should throw error when set is called', async () => {
+			await client.set('key', 'value')
+		})
+
+		it('should throw error when get is called', async () => {
+			await client.get('any-value')
+		})
+
+		it('should throw error when keys is called', async () => {
+			await client.keys('*')
+		})
+
+		it('should throw error when remove is called', async () => {
+			await client.remove('some-key')
+		})
+
+		it('should throw error when remove is called', async () => {
+			await client.remove('some-key')
+		})
+
+		it('should throw error when setMany is called', async () => {
+			await client.setMany(['key-1', 'value-1', 'key-2', 'value-2'])
+		})
+
+		it('should throw error when getMany is called', async () => {
+			await client.getMany(['key-1', 'key-2'])
+		})
+
+		it('should throw error when flushAll is called', async () => {
+			await client.flushAll()
+		})
+
+		it('should throw error when selectBucket is called', async () => {
+			await client.selectBucket(4)
+		})
+
+		it('should throw error when dumpBucket is called', async () => {
+			await client.dumpBucket()
+		})
+
+		it('should throw error when disconnect is called', async () => {
+			await client.disconnect()
+		})
+
+		it('should throw error when connected is called', async () => {
+			await client.connected()
+		})
+
+		it('should throw error when duplicate is called', async () => {
+			// await client.duplicate()
 		})
 	})
 })

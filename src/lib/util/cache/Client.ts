@@ -1,5 +1,6 @@
 import { promisify } from 'es6-promisify'
 import { ClientOpts, RedisClient } from 'redis'
+import { Logger } from '~/lib/util'
 
 /*
  * Default Client Options
@@ -31,17 +32,31 @@ export class Client {
 	 */
 	private _client: RedisClient
 
-	/**
+	/*
 	 * Throw Exceptions
 	 */
 	private _throws = false
 
 	/*
+	 * Debug Mode
+	 */
+	protected debug = false
+
+	/*
+	 * Internal Logger
+	 */
+	private _logger: Console | Logger = console
+
+	/*
 	 * Constructor
 	 */
 	constructor(option: ClientOptions = {}, client?: RedisClient) {
-		// Use client if given.
+		// Set debug based on ENV var
+		this.debug = process.env.DEBUG_MODE === 'true'
+
+		// Client provided?
 		if (client) {
+			// Use client if given.
 			this._client = client
 		} else {
 			// Override default options
@@ -55,30 +70,33 @@ export class Client {
 		}
 
 		// Debug Mode?
-		if (process.env.DEBUG_MODE === 'true') {
+		if (this.debug) {
+			// Logger instance
+			const logger = this._logger
+
 			// Add logging to client events
 			this._client.on('error', function(msg) {
-				console.error(`Redis ${msg}`)
+				logger.error(`Redis ${msg}`)
 			})
 
 			this._client.on('ready', function() {
-				console.info('Redis Ready')
+				logger.info('Redis Ready')
 			})
 
 			this._client.on('connect', function() {
-				console.info(`Redis Connected`)
+				logger.info(`Redis Connected`)
 			})
 
 			this._client.on('reconnecting', function() {
-				console.info('Redis Reconnecting')
+				logger.info('Redis Reconnecting')
 			})
 
 			this._client.on('end', function() {
-				console.info(`Redis Ended`)
+				logger.info(`Redis Ended`)
 			})
 
 			this._client.on('warning', function(msg) {
-				console.warn(`Redis Warning: ${msg}`)
+				logger.warn(`Redis Warning: ${msg}`)
 			})
 		}
 	}
@@ -97,7 +115,21 @@ export class Client {
 		return this._throws
 	}
 
-	/**
+	/*
+	 * Set debug property
+	 */
+	public setDebug(value: boolean): void {
+		this.debug = value
+	}
+
+	/*
+	 * Get debug property
+	 */
+	public getDebug(): boolean {
+		return this.debug
+	}
+
+	/*
 	 * Set a cache value
 	 */
 	public async set(
@@ -122,8 +154,8 @@ export class Client {
 			// Execute function
 			result = await setAsync(key, value, mode, duration).catch(e => {
 				// Log
-				if (process.env.DEBUG_MODE === 'true') {
-					console.error(`Cache Client Exception: ${e.toString()}`)
+				if (this.debug) {
+					this._logger.error(e.message)
 				}
 
 				// Bail on fail?
@@ -138,8 +170,8 @@ export class Client {
 			// Execute function
 			result = await setAsync(key, value).catch(e => {
 				// Log
-				if (process.env.DEBUG_MODE === 'true') {
-					console.error(`Cache Client Exception: ${e.toString()}`)
+				if (this.debug) {
+					this._logger.error(e.message)
 				}
 
 				// Bail on fail?
@@ -151,7 +183,7 @@ export class Client {
 		return result === 'OK'
 	}
 
-	/**
+	/*
 	 * Get a cache value
 	 */
 	public async get(key: string): Promise<string | null> {
@@ -164,14 +196,14 @@ export class Client {
 		// Execute function
 		const result = await getAsync(key).catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
 			if (this._throws) throw e
 
-			//
+			// Return null
 			return null
 		})
 
@@ -179,7 +211,7 @@ export class Client {
 		return result
 	}
 
-	/**
+	/*
 	 * Get cached keys by given param
 	 * Note '*' is a wildcard and will return all bucket keys if by itself
 	 */
@@ -193,8 +225,8 @@ export class Client {
 		// Execute function
 		const result = await keysAsync(pattern).catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -208,7 +240,7 @@ export class Client {
 		return result
 	}
 
-	/**
+	/*
 	 * Delete/remove cache key-value-pair(s)
 	 */
 	public async remove(key: string | string[]): Promise<boolean> {
@@ -221,8 +253,8 @@ export class Client {
 		// Execute function
 		const result = await delAsync(key).catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -236,7 +268,7 @@ export class Client {
 		return result > 0
 	}
 
-	/**
+	/*
 	 * Set many values in  cache
 	 * example: ['key1', 'value1', 'key2', 'value2', 'etcKey', 'etcValue']
 	 */
@@ -250,8 +282,8 @@ export class Client {
 		// Execute function
 		const result = await msetAsync(keyValuePairs).catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -265,7 +297,7 @@ export class Client {
 		return result
 	}
 
-	/**
+	/*
 	 * Get many values from cache
 	 */
 	public async getMany(keys: string[]): Promise<string[]> {
@@ -278,8 +310,8 @@ export class Client {
 		// Execute function
 		const result = await mgetAsync(keys).catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -293,7 +325,7 @@ export class Client {
 		return result
 	}
 
-	/**
+	/*
 	 * Flush ALL key-value-pairs in ALL buckets
 	 */
 	public async flushAll(): Promise<boolean> {
@@ -306,8 +338,8 @@ export class Client {
 		// Execute function
 		const result = await flushallAsync().catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -318,7 +350,7 @@ export class Client {
 		return result === 'OK'
 	}
 
-	/**
+	/*
 	 * Select cache database/bucket
 	 */
 	public async selectBucket(bucket: number | string): Promise<boolean> {
@@ -331,8 +363,8 @@ export class Client {
 		// Execute function
 		const result = await selectAsync(bucket).catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -343,7 +375,7 @@ export class Client {
 		return result === 'OK'
 	}
 
-	/**
+	/*
 	 * Flush / clear all key-value-pairs in active bucket
 	 */
 	public async dumpBucket(): Promise<boolean> {
@@ -356,8 +388,8 @@ export class Client {
 		// Execute function
 		const result = await flushdbAsync().catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -368,7 +400,7 @@ export class Client {
 		return result === 'OK'
 	}
 
-	/**
+	/*
 	 * Duplicate Client w/new Connection
 	 */
 	public async duplicate(options?: ClientOpts): Promise<Client> {
@@ -386,8 +418,8 @@ export class Client {
 		// Execute function
 		const client = await duplicateAsync(config).catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Rethrow, bigger issue here.
@@ -398,7 +430,7 @@ export class Client {
 		return new Client({}, client)
 	}
 
-	/**
+	/*
 	 * Disconnect Client
 	 */
 	public async disconnect(): Promise<boolean> {
@@ -411,8 +443,8 @@ export class Client {
 		// Execute function
 		const result = await quitAsync().catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.error(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -423,7 +455,7 @@ export class Client {
 		return result === 'OK'
 	}
 
-	/**
+	/*
 	 * Is client currently connected?
 	 */
 	public async connected(): Promise<boolean> {
@@ -436,8 +468,8 @@ export class Client {
 		// Execute function
 		const connected = await pingAsync().catch(e => {
 			// Log
-			if (process.env.DEBUG_MODE === 'true') {
-				console.info(`Cache Client Exception: ${e.toString()}`)
+			if (this.debug) {
+				this._logger.error(e.message)
 			}
 
 			// Bail on fail?

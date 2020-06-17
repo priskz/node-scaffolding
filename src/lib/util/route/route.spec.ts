@@ -59,6 +59,34 @@ describe('util/route', () => {
 		})
 	})
 
+	describe('when register is given a single middleware', () => {
+		// Init router
+		const router = Router()
+
+		// Create route with middleare
+		const mockRouteConfig: RouteConfig = {
+			path: '/test-route-1',
+			method: 'get',
+			handler: () => {},
+			middleware: () => {}
+		}
+
+		// Test
+		route.register(router, mockRouteConfig)
+
+		// Assertions
+		it('should add one layer to the route stack', async () => {
+			// Assertions
+			expect(router.stack[0].route.stack.length).to.equal(2)
+		})
+
+		it('should make middleware async', async () => {
+			expect(router.stack[0].route.stack[1].handle.toString()).to.contain(
+				'asyncUtilWrap'
+			)
+		})
+	})
+
 	describe('when register is given two (optional) middleware', () => {
 		// Init router
 		const router = Router()
@@ -84,6 +112,9 @@ describe('util/route', () => {
 
 		it('should make middleware async', async () => {
 			expect(router.stack[0].route.stack[1].handle.toString()).to.contain(
+				'asyncUtilWrap'
+			)
+			expect(router.stack[0].route.stack[2].handle.toString()).to.contain(
 				'asyncUtilWrap'
 			)
 		})

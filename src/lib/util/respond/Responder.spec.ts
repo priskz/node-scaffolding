@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { NextFunction } from 'express'
 import mocks from 'node-mocks-http'
 import { Responder } from './'
 
@@ -219,6 +220,27 @@ describe('util/Responder', () => {
 
 			// Test
 			const responder = new Responder(request, response)
+
+			// Use function
+			responder.redirect(url, true)
+
+			// Assertions
+			expect(response.statusCode).to.equal(301)
+			expect(response.header('Location')).to.equal(url)
+		})
+	})
+
+	describe('when redirect is called and has Responder has next defined', () => {
+		it('should create permanent 301 response && after middleware should be ran', async () => {
+			// Mocks
+			const request = mocks.createRequest()
+			const response = mocks.createResponse()
+
+			// Redirect url
+			const url = '/somewhere-else'
+
+			// Test
+			const responder = new Responder(request, response, () => {})
 
 			// Use function
 			responder.redirect(url, true)

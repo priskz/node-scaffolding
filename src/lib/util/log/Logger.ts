@@ -63,10 +63,10 @@ export class Logger {
 	}
 
 	/*
-	 * Warning level log
+	 * Warn level log
 	 */
-	public warning(msg: string, data?: Data): void {
-		this._log.warning(this._format(msg, data))
+	public warn(msg: string, data?: Data): void {
+		this._log.warn(this._format(msg, data))
 	}
 
 	/*
@@ -147,7 +147,7 @@ export class Logger {
 				alert: 1,
 				crit: 2,
 				error: 3,
-				warning: 4,
+				warn: 4,
 				notice: 5,
 				info: 6,
 				debug: 7
