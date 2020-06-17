@@ -36,13 +36,31 @@ describe('src/lib/util/cache/DefaultCache', () => {
 		await defaultCache.client().disconnect()
 	})
 
-	describe('constructor method', () => {
-		it('should create a new instance', () => {
+	describe('constructor method', async () => {
+		it('should create a new instance', async () => {
 			// Test
 			defaultCache = new DefaultCache()
 
 			// Assertions
 			expect(defaultCache).to.be.an.instanceOf(DefaultCache)
+		})
+	})
+
+	describe('constructor method is given optional config param', async () => {
+		it('should create a new instance', async () => {
+			// Test
+			const testDefaultCache = new DefaultCache({
+				client: new Client({ port: 8080 }),
+				bucket: 4,
+				prefix: 'optional-test-key',
+				ttl: 24
+			})
+
+			// Clean up
+			await testDefaultCache.client().disconnect()
+
+			// Assertions
+			expect(testDefaultCache).to.be.an.instanceOf(DefaultCache)
 		})
 	})
 
@@ -118,6 +136,29 @@ describe('src/lib/util/cache/DefaultCache', () => {
 
 			// Assertions
 			expect(result).to.be.like(simpleObject)
+		})
+	})
+
+	describe('get method throws invalid JSON error', () => {
+		it('should return null', async () => {
+			// Test data
+			const data = {
+				key: 'invalid-json-test',
+				value: '{test: value,}'
+			}
+
+			// Add to cache
+			await defaultCache.set(data.key, data.value)
+
+			// Test
+			const result1 = await defaultCache.get<SimpleObject>(data.key)
+
+			// Clean up
+			const result2 = await defaultCache.remove(data.key)
+
+			// Assertions
+			expect(result1).to.be.null
+			expect(result2).to.be.true
 		})
 	})
 

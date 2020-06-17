@@ -62,12 +62,11 @@ export class DefaultCache {
 			try {
 				value = JSON.stringify(data)
 			} catch (error) {
-				if (process.env.DEBUG_MODE === 'true') {
+				if (this.client().getDebug()) {
 					// Log
-					console.error('DefaultCache unable to JSON.stringify: ', {
-						value,
-						error
-					})
+					this.client().logger.error(
+						`DefaultCache unable to JSON.stringify: ${value}:${error}`
+					)
 				}
 
 				return false

@@ -45,7 +45,7 @@ export class Client {
 	/*
 	 * Internal Logger
 	 */
-	private _logger: Console | Logger = console
+	public logger: Console | Logger = console
 
 	/*
 	 * Constructor
@@ -72,7 +72,7 @@ export class Client {
 		// Debug Mode?
 		if (this.debug) {
 			// Logger instance
-			const logger = this._logger
+			const logger = this.logger
 
 			// Add logging to client events
 			this._client.on('error', function(msg) {
@@ -155,7 +155,7 @@ export class Client {
 			result = await setAsync(key, value, mode, duration).catch(e => {
 				// Log
 				if (this.debug) {
-					this._logger.error(e.message)
+					this.logger.error(e.message)
 				}
 
 				// Bail on fail?
@@ -171,7 +171,7 @@ export class Client {
 			result = await setAsync(key, value).catch(e => {
 				// Log
 				if (this.debug) {
-					this._logger.error(e.message)
+					this.logger.error(e.message)
 				}
 
 				// Bail on fail?
@@ -197,7 +197,7 @@ export class Client {
 		const result = await getAsync(key).catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -226,7 +226,7 @@ export class Client {
 		const result = await keysAsync(pattern).catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -254,7 +254,7 @@ export class Client {
 		const result = await delAsync(key).catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -283,7 +283,7 @@ export class Client {
 		const result = await msetAsync(keyValuePairs).catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -311,7 +311,7 @@ export class Client {
 		const result = await mgetAsync(keys).catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -339,7 +339,7 @@ export class Client {
 		const result = await flushallAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -364,7 +364,7 @@ export class Client {
 		const result = await selectAsync(bucket).catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -389,7 +389,7 @@ export class Client {
 		const result = await flushdbAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -419,7 +419,7 @@ export class Client {
 		const client = await duplicateAsync(config).catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Rethrow, bigger issue here.
@@ -444,7 +444,7 @@ export class Client {
 		const result = await quitAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
@@ -469,7 +469,7 @@ export class Client {
 		const connected = await pingAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this._logger.error(e.message)
+				this.logger.error(e.message)
 			}
 
 			// Bail on fail?
