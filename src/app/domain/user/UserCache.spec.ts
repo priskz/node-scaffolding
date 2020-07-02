@@ -19,7 +19,7 @@ describe('src/app/domain/user/UserCache', () => {
 		// Clean up
 		await userCache.client().remove(userCache.parseKey(mockUser.id))
 		await userCache.client().disconnect()
-		await MockUser.destroy(mockUser)
+		await MockUser.destroy(mockUser.id)
 	})
 
 	describe('constructor method', () => {
