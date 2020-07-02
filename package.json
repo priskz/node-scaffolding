@@ -30,7 +30,7 @@
 		"bcrypt": "^4.0.1",
 		"body-parser": "^1.19.0",
 		"compression": "^1.7.4",
-		"cookie-parser": "^1.4.4",
+		"cookie-parser": "^1.4.5",
 		"crypto-js": "^4.0.0",
 		"dotenv": "^8.2.0",
 		"es6-promisify": "^6.1.1",
@@ -43,8 +43,7 @@
 		"reflect-metadata": "^0.1.13",
 		"swagger-ui-express": "^4.1.4",
 		"typeorm": "^0.2.25",
-		"winston": "^3.2.1",
-		"winston-mail": "^2.0.0"
+		"winston": "^3.2.1"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.10.1",
@@ -73,7 +72,6 @@
 		"@types/redis": "^2.8.22",
 		"@types/swagger-ui-express": "^4.1.2",
 		"@types/tough-cookie": "^2.3.7",
-		"@types/winston-mail": "^1.5.1",
 		"@typescript-eslint/eslint-plugin": "^2.34.0",
 		"@typescript-eslint/parser": "^2.34.0",
 		"babel-eslint": "^10.1.0",
