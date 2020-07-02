@@ -49,27 +49,20 @@ async function create(options: CreateOptions = {}): Promise<User> {
 }
 
 /**
- * Delete a user from the database by Model, id, or email
+ * Delete a user from the database by id or email
  */
-async function destroy(mockUser: User | number | string): Promise<void> {
-	if (
-		mockUser &&
-		typeof mockUser !== 'number' &&
-		typeof mockUser !== 'string'
-	) {
-		// Delete by model
-		await mockUser.remove()
-	} else if (typeof mockUser == 'number') {
+async function destroy(id: number | string): Promise<void> {
+	if (typeof id == 'number') {
 		// Delete by email
 		const user = new User()
 
-		user.id = mockUser
+		user.id = id
 
 		await user.remove()
-	} else if (typeof mockUser == 'string') {
+	} else if (typeof id == 'string') {
 		// Delete by email
 		const user = await User.find({
-			where: { email: mockUser }
+			where: { email: id }
 		})
 
 		await user[0].remove()
