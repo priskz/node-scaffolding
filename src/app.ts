@@ -1,11 +1,12 @@
 import 'reflect-metadata'
 import bodyParser from 'body-parser'
+import cookieParser from 'cookie-parser'
 import compression from 'compression'
 import express, { Express } from 'express'
 import { config } from '~/config'
-import { exception } from '~/app/middleware'
+import { global, exception } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, log } from '~/lib/util'
+import { cache, database, env, log } from '~/lib/util'
 
 /*
  * Instantiate App Framework
@@ -30,6 +31,12 @@ async function run(): Promise<Express> {
 
 	// Parse incoming requests
 	instance.use(bodyParser.json())
+
+	// Parse cookies attached to requests
+	instance.use(cookieParser(env('COOKIE_SECRET')))
+
+	// Global app middleware
+	instance.use(global)
 
 	// Configure route handlers
 	instance.use(`${config.api.prefix}${config.api.version}`, router)
