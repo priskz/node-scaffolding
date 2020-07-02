@@ -4,8 +4,17 @@ import { cache, CacheConfig } from './cache'
 import { db, DbConfig } from './database'
 import { docs, DocsConfig } from './docs'
 import { log, LogConfig } from './log'
+import { session, SessionConfig } from './session'
 
-export const config: ConfigDictionary = { api, app, cache, db, docs, log }
+export const config: ConfigDictionary = {
+	api,
+	app,
+	cache,
+	db,
+	docs,
+	log,
+	session
+}
 
 interface ConfigDictionary {
 	api: ApiConfig
@@ -14,4 +23,5 @@ interface ConfigDictionary {
 	db: DbConfig
 	docs: DocsConfig
 	log: LogConfig
+	session: SessionConfig
 }
