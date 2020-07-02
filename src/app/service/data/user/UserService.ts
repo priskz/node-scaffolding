@@ -1,5 +1,5 @@
 import { DataService } from '~/lib/service/DataService'
-import { User, UserRepository } from '~/app/domain/user'
+import { User, UserRepository } from '~/app/domain'
 
 export class UserService extends DataService<User> {
 	/*
@@ -13,6 +13,6 @@ export class UserService extends DataService<User> {
 	 * Construct
 	 */
 	public async getOneByEmail(email: string): Promise<User | undefined> {
-		return await this.repository.getOne({ email })
+		return await this.getOne({ where: { email } })
 	}
 }

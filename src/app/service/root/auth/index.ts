@@ -1,1 +1,1 @@
-export * from './AuthRootService'
+export * from './AuthRoot'

@@ -2,7 +2,7 @@ import { crypt } from '~/lib/util'
 import { User } from '~/app/domain'
 import { SessionService, UserService } from '~/app/service/data'
 
-export class AuthRootService {
+export class AuthRoot {
 	/*
 	 * Aggregate Services
 	 */
