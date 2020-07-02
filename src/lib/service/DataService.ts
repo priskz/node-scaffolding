@@ -1,46 +1,58 @@
-import { Repository } from '~/lib/domain/Repository'
+import { TypeORMRepository as Repository, Query } from '~/lib/domain'
 
-export class DataService<Entity> {
+export class DataService<T> {
 	/*
 	 * Repository
 	 */
-	protected repository: Repository<Entity>
+	protected repository: Repository<T>
 
 	/*
 	 * Construct
 	 */
-	constructor(repository: Repository<Entity>) {
+	constructor(repository: Repository<T>) {
 		this.repository = repository
 	}
 
 	/*
 	 * Get
 	 */
-	public async get(
-		data = {},
-		count = false
-	): Promise<Entity | Entity[] | undefined> {
-		return await await this.get(data, count)
+	public async get(query?: Query<T>): Promise<T[]> {
+		// Set default values
+		if (!query) query = undefined
+
+		// Execute and return result
+		return await this.repository.get({ query })
 	}
 
 	/*
 	 * Get
 	 */
-	public async getOne(id: string | number): Promise<Entity | undefined> {
-		return await this.getOne(id)
+	public async getWithCount(query?: Query<T>): Promise<[T[], number]> {
+		// Set default values
+		if (!query) query = undefined
+
+		// Execute and return result
+		return await this.repository.getWithCount({ query })
+	}
+
+	/*
+	 * Get One
+	 */
+	public async getOne(query: Query<T>): Promise<T | undefined> {
+		return await this.getOne(query)
 	}
 
 	/*
 	 * Create
 	 */
-	public async create(data: {}): Promise<Entity | undefined> {
+	public async create(data: {}): Promise<T | undefined> {
 		return await this.repository.create(data)
 	}
 
 	/*
 	 * Update
 	 */
-	public async update(data: {}): Promise<Entity | undefined> {
+	public async update(data: {}): Promise<T | undefined> {
 		return await this.repository.update(data)
 	}
 
