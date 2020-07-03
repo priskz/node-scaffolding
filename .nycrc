@@ -1,21 +1,18 @@
 {
+    "extends": "@istanbuljs/nyc-config-typescript",
 	"include": [
 		"src/**/*.ts"
 	],
 	"exclude": [
+		"src/**/types",
 		"src/test/**/*",
 		"src/**/*.spec.ts",
 		"src/**/index.ts",
 		"src/migration",
-		"src/routes/**/*"
+		"src/app/routes/**/*"
 	],
 	"extension": [
 		".ts"
 	],
-	"require": [
-		"ts-node/register"
-	],
-	"sourceMap": true,
-	"instrument": true,
 	"all": true
 }
