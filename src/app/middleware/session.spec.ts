@@ -6,7 +6,7 @@ import { getSessionIdFromHeader } from '~/test/util'
 
 //----- Tests -----//
 
-describe('middleware/session', () => {
+describe.skip('middleware/session', () => {
 	describe('when a cookie is tampered with @database', () => {
 		it('should return Not Authorized', async () => {
 			// Make request to generate session

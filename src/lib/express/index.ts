@@ -1,1 +1,1 @@
-export * from './express-serve-static-core'
+export * from './types'

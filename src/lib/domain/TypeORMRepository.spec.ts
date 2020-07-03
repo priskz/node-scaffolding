@@ -4,7 +4,7 @@ import { getRepository } from 'typeorm'
 import { TypeORMRepository } from './TypeORMRepository'
 import { User } from '~/app/domain'
 
-describe.only('lib/domain/TypeORMRepository', () => {
+describe('lib/domain/TypeORMRepository', () => {
 	// Mock Data
 	const mockUserData = {
 		email: 'typeormrepository@unit-test.com',
@@ -74,7 +74,7 @@ describe.only('lib/domain/TypeORMRepository', () => {
 	})
 
 	describe.skip('Todo', () => {
-		it('Tod0', async () => {
+		it('Todo', async () => {
 			//
 		})
 	})
