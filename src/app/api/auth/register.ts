@@ -3,7 +3,7 @@ import { Validator } from 'node-input-validator'
 import { respond } from '~/lib/util'
 import { AuthRoot } from '~/app/service'
 
-export async function login(
+export async function register(
 	req: Request,
 	res: Response,
 	next: NextFunction
@@ -20,19 +20,19 @@ export async function login(
 	// Invalid?
 	if (!valid) {
 		// Error response
-		respond(req, res, next).error(null, 401)
+		respond(req, res, next).error(null, 400)
 		return
 	}
 
 	const service = new AuthRoot()
 
-	// Attempt login
-	const user = await service.login(req.body.email, req.body.pass)
+	// Attempt
+	const user = await service.register(req.body)
 
-	// Failed login?
+	// Failed?
 	if (!user) {
 		// Error response
-		respond(req, res, next).error(null, 401)
+		respond(req, res, next).error(null, 400)
 		return
 	}
 
