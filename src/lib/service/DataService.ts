@@ -16,10 +16,7 @@ export class DataService<T> {
 	/*
 	 * Get
 	 */
-	public async get(query?: Query<T>): Promise<T[]> {
-		// Set default values
-		if (!query) query = undefined
-
+	public async get(query: Query<T> = {}): Promise<T[]> {
 		// Execute and return result
 		return await this.repository.get({ query })
 	}
@@ -27,10 +24,7 @@ export class DataService<T> {
 	/*
 	 * Get
 	 */
-	public async getWithCount(query?: Query<T>): Promise<[T[], number]> {
-		// Set default values
-		if (!query) query = undefined
-
+	public async getWithCount(query: Query<T> = {}): Promise<[T[], number]> {
 		// Execute and return result
 		return await this.repository.getWithCount({ query })
 	}
@@ -38,8 +32,8 @@ export class DataService<T> {
 	/*
 	 * Get One
 	 */
-	public async getOne(query: Query<T>): Promise<T | undefined> {
-		return await this.getOne(query)
+	public async getOne(query: Query<T> = {}): Promise<T | undefined> {
+		return await this.repository.getOne({ query })
 	}
 
 	/*
