@@ -37,8 +37,9 @@ export class TypeORMRepository<T> {
 	/*
 	 * Construct
 	 */
-	constructor(repository: Repository<T>) {
+	constructor(repository: Repository<T>, softDeletes = false) {
 		this.repository = repository
+		this.softDeletes = softDeletes
 	}
 
 	/*
@@ -112,18 +113,31 @@ export class TypeORMRepository<T> {
 	/*
 	 * Delete Entity
 	 */
-	public async delete(id: number | string): Promise<DeleteResult | undefined> {
+	public async delete(id: number | string): Promise<boolean> {
 		// Init result
 		let result
 
 		// Attempt query
 		if (this.softDeletes) {
+			// Attempt
 			result = await this.repository.softDelete(id)
+
+			// Check if successful
+			if (result.raw.affectedRows > 0) {
+				return true
+			}
 		} else {
+			// Attempt
 			result = await this.repository.delete(id)
+
+			// Check if successful
+			if (result.affected && result.affected > 0) {
+				return true
+			}
 		}
 
-		return result
+		// Failed
+		return false
 	}
 
 	/*
@@ -162,8 +176,17 @@ export class TypeORMRepository<T> {
 			}
 
 			// Add skip/take options
-			if (config.query.skip) skip = config.query.skip
-			if (config.query.take) take = config.query.take
+			if (config.query.take) {
+				take = config.query.take
+			}
+
+			if (config.query.skip) {
+				if (take) {
+					skip = config.query.skip
+				} else {
+					throw Error('Offset Without Limit Not Supported Error')
+				}
+			}
 
 			// Set where params
 			if (config.query.where) {
@@ -224,22 +247,15 @@ export class TypeORMRepository<T> {
 								case 'IN':
 									where.push({ [key]: In(object.value) })
 									break
-								case 'ANY':
-									where.push({ [key]: Any(object.value) })
-									break
 								case 'IS NULL':
 									where.push({ [key]: IsNull() })
 									break
 								case 'IS NOT NULL':
-									where.push({ [key]: Not(null) })
+									where.push({ [key]: Not('null') })
 									break
 								case 'RAW':
 									where.push({ [key]: Raw(object.value) })
 									break
-								default:
-									throw Error(
-										`Advanced where operator: ${object.operator} not supported`
-									)
 							}
 						} else {
 							// Add to clauses
