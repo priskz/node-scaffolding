@@ -21,6 +21,12 @@ export class AuthRoot {
 	 * Register New User
 	 */
 	public async register(data: any): Promise<User | undefined> {
+		// Check if exists
+		const registered = await this.user.getOneByEmail(data.email)
+
+		// Stop if registered
+		if (registered) return
+
 		// Hash pass and attempt
 		return await this.user.create({
 			...data,

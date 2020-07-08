@@ -23,7 +23,7 @@ const seeds: UserSeedData[] = [
 /**
  *  Get seeds
  */
-function get(): UserSeedData[] {
+function getSeeds(): UserSeedData[] {
 	return seeds
 }
 
@@ -35,7 +35,7 @@ function getPrimaryMockUserData(): PrimaryMockUserData {
 }
 
 export const UserSeed = {
-	get,
+	getSeeds,
 	getPrimaryMockUserData
 }
 

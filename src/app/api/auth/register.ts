@@ -11,7 +11,7 @@ export async function register(
 	// Prepare validation
 	const input = new Validator(req.body, {
 		email: 'required|email',
-		pass: 'required'
+		pass: 'required|minLength:6'
 	})
 
 	// Validate
@@ -20,10 +20,11 @@ export async function register(
 	// Invalid?
 	if (!valid) {
 		// Error response
-		respond(req, res, next).error(null, 400)
+		respond(req, res, next).error(input.errors, 400)
 		return
 	}
 
+	// Init service
 	const service = new AuthRoot()
 
 	// Attempt

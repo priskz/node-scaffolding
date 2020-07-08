@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 import { MockUser } from '~/test/mocks'
-import { UserSeed } from '~/test/seeds/user'
 import { User } from '~/app/domain'
 import { AuthRoot } from './'
 
@@ -9,7 +8,7 @@ describe('app/service/root/auth/AuthRoot', () => {
 	let service: AuthRoot
 
 	// Mock user data
-	let userData = UserSeed.getPrimaryMockUserData()
+	let userData = MockUser.getPrimaryMockUserData()
 
 	// Mock User
 	let mockUser: User
