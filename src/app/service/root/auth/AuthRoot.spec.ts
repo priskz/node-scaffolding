@@ -71,8 +71,8 @@ describe('app/service/root/auth/AuthRoot', () => {
 		})
 	})
 
-	describe('logout method', () => {
-		it.skip('should expire active session', async () => {
+	describe.skip('logout method', () => {
+		it('should expire active session', async () => {
 			//
 		})
 	})
