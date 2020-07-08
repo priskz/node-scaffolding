@@ -10,7 +10,7 @@ export class UserService extends DataService<User> {
 	}
 
 	/*
-	 * Construct
+	 * Get a single user by email address
 	 */
 	public async getOneByEmail(email: string): Promise<User | undefined> {
 		return await this.getOne({ where: { email } })

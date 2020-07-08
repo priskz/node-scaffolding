@@ -1,16 +1,17 @@
 import { expect } from 'chai'
-import { MockSession } from '~/test/mocks'
+import { SessionService } from './'
 
-describe.skip('app/service/data/user/SessionService', () => {
-	describe('when a session is found', () => {
-		it('should expire the session', async () => {
-			//
-		})
-	})
+describe('app/service/data/session/SessionService', () => {
+	// Unit
+	let service: SessionService
 
-	describe('when no session is found', () => {
-		it('should return false', async () => {
-			//
+	describe('constructor method', () => {
+		it('should return new instance of SessionService', async () => {
+			// Test
+			service = new SessionService()
+
+			// Assertions
+			expect(service).to.be.an.instanceOf(SessionService)
 		})
 	})
 })
