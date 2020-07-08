@@ -21,31 +21,34 @@ export class AuthRoot {
 	 * Register New User
 	 */
 	public async register(data: any): Promise<User | undefined> {
-		// Hash password before saving
-		data.password = await crypt.hash.make(data.password)
-
-		// Create
-		const user = await this.user.create(data)
-
-		// Return
-		if (user) return user
+		// Hash pass and attempt
+		return await this.user.create({
+			...data,
+			password: await crypt.hash.make(data.password)
+		})
 	}
 
 	/*
-	 * Log User In
+	 * Login a User
 	 */
 	public async login(
 		email: string,
 		password: string
 	): Promise<User | undefined> {
-		// Get user
+		// Find user
 		const user = await this.user.getOneByEmail(email)
 
+		// Not found?
+		if (!user) return
+
 		// Compare password
-		const valid = user && (await crypt.hash.check(password, user.password))
+		const valid = await crypt.hash.check(password, user.password)
 
 		// Return
-		if (valid) return user
+		if (!valid) return
+
+		// Return user
+		return user
 	}
 
 	/*
@@ -53,6 +56,7 @@ export class AuthRoot {
 	 */
 	public async logout(sessionId: string): Promise<Boolean> {
 		// Expire session
+		// TODO:
 		return await this.session.expire(sessionId)
 	}
 }
