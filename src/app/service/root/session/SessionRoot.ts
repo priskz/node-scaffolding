@@ -20,7 +20,7 @@ export class SessionRoot {
 	 * Generate a new Session
 	 */
 	public async generate(
-		browserAgent: string,
+		agent: string,
 		ipAddress: string
 	): Promise<Session | undefined> {
 		// TODO: Clean up time logic
@@ -35,7 +35,7 @@ export class SessionRoot {
 
 		// Create
 		return await this.session.create({
-			browserAgent,
+			agent,
 			ipAddress,
 			expiresAt
 		})
@@ -49,9 +49,9 @@ export class SessionRoot {
 	}
 
 	/*
-	 * Update activeAt on Session
+	 * Updates Session's activateAt with current time stamp
 	 */
-	public async updateActiveAt(id: string): Promise<void> {
+	public async touch(id: string): Promise<void> {
 		await this.session.update({ id, activeAt: moment().toDate() })
 	}
 

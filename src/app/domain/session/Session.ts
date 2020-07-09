@@ -13,8 +13,11 @@ export class Session extends BaseEntity {
 	@PrimaryGeneratedColumn('uuid')
 	id!: string
 
+	@Column('integer', { nullable: true })
+	userId!: number | null
+
 	@Column('varchar', { nullable: true })
-	browserAgent!: string
+	agent!: string
 
 	@Column('varchar', { nullable: true })
 	ipAddress!: string
@@ -50,9 +53,6 @@ export class Session extends BaseEntity {
 		default: null
 	})
 	deletedAt!: Date
-
-	@Column('integer', { nullable: true })
-	userId!: number | null
 
 	//----- Relationships -----//
 

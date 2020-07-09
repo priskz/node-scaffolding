@@ -7,7 +7,7 @@ import { config } from '~/config'
 async function create(options: CreateOptions = {}): Promise<Session> {
 	// Set default prop values and then update with given overrides
 	const option: CreateOptions = {
-		browserAgent: 'Test Agent',
+		agent: 'Test Agent',
 		ipAddress: 'Test IP',
 		expires: moment()
 			.add(config.session.duration.guest, 'days')
@@ -53,7 +53,7 @@ function getCookie(sessionId: string): string {
 
 interface CreateOptions {
 	id?: string
-	browserAgent?: string
+	agent?: string
 	ipAddress?: string
 	expires?: Date
 	lastActive?: Date
