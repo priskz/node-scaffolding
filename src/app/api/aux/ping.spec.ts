@@ -6,7 +6,7 @@ import { appRequest } from '~/test/util'
 
 describe('api/aux/ping', () => {
 	describe('when GET request made', () => {
-		it('should return 200', async () => {
+		it('should return 200 with PONG in body', async () => {
 			// Test
 			const result: AxiosResponse = await appRequest.get('/ping')
 

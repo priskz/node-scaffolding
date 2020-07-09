@@ -11,6 +11,11 @@ const base = ''
 // Config Routes
 const routes: RouteConfig[] = [
 	{
+		path: '/error',
+		method: 'post',
+		handler: AuxApi.error
+	},
+	{
 		path: '/info',
 		method: 'get',
 		handler: AuxApi.info
