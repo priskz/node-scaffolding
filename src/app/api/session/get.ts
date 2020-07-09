@@ -14,7 +14,6 @@ export async function get(
 	} else {
 		// Removie cookie
 		res.clearCookie(config.session.cookie)
-
 		// Error
 		respond(req, res, next).error(null, 400)
 	}

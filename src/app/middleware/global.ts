@@ -20,7 +20,7 @@ export async function global(
 		},
 		setSession: {
 			value: function(session: Session): void {
-				this.app.session = session
+				this.context.session = session
 			}
 		},
 		getSession: {

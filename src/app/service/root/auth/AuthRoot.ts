@@ -63,6 +63,7 @@ export class AuthRoot {
 	public async logout(sessionId: string): Promise<Boolean> {
 		// Expire session
 		// TODO:
-		return await this.session.expire(sessionId)
+		// return await this.session.expire(sessionId)
+		return false
 	}
 }

@@ -10,4 +10,4 @@
 
 .env*
 !.env.example
-!.env.prod-example
+!.env.prod.example

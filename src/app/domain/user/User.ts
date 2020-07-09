@@ -33,14 +33,14 @@ export class User extends BaseEntity {
 
 	@Column('timestamp', {
 		precision: 0,
-		default: () => 'CURRENT_TIMESTAMP()'
+		default: () => 'CURRENT_TIMESTAMP'
 	})
 	createdAt!: Date
 
 	@Column('timestamp', {
 		precision: 0,
 		default: null,
-		onUpdate: 'CURRENT_TIMESTAMP()'
+		onUpdate: 'CURRENT_TIMESTAMP'
 	})
 	updatedAt!: Date
 

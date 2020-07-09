@@ -24,7 +24,7 @@ export const db: DbConfig = {
 				return x.replace('ts', 'js').replace('src', 'dist')
 		  }),
 	subscribers: !prod
-		? env('TYPEORM_MIGRATIONS', '', 'array')
+		? env('TYPEORM_SUBSCRIBERS', '', 'array')
 		: env('TYPEORM_SUBSCRIBERS', '', 'array').map((x: string) => {
 				return x.replace('ts', 'js').replace('src', 'dist')
 		  }),
