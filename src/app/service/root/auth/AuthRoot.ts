@@ -27,10 +27,13 @@ export class AuthRoot {
 		// Stop if registered
 		if (registered) return
 
-		// Hash pass and attempt
+		// Hash pass
+		const password = await crypt.hash.make(data.pass)
+
+		//  Attempt
 		return await this.user.create({
 			...data,
-			password: await crypt.hash.make(data.password)
+			password
 		})
 	}
 
