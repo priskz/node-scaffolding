@@ -1,7 +1,8 @@
 import { expect } from 'chai'
-import { MockUser } from '~/test/mocks'
+import { MockSession, MockUser } from '~/test/mocks'
 import { AxiosResponse } from 'axios'
 import { appRequest } from '~/test/util'
+import { getSessionIdFromHeader } from '~/test/util'
 
 //----- Tests -----//
 
@@ -22,6 +23,14 @@ describe('app/api/auth/register', () => {
 				pass: guestData.password
 			})
 
+			// Extract session id
+			const validSessionId = getSessionIdFromHeader(
+				result.headers['set-cookie'][0]
+			)
+
+			// Clean Up
+			MockSession.destroy(validSessionId)
+
 			// Assertions
 			expect(result.status).to.equal(204)
 		})
@@ -34,6 +43,14 @@ describe('app/api/auth/register', () => {
 				...guestData,
 				pass: guestData.password
 			})
+
+			// Extract session id
+			const validSessionId = getSessionIdFromHeader(
+				result.headers['set-cookie'][0]
+			)
+
+			// Clean Up
+			MockSession.destroy(validSessionId)
 
 			// Assertions
 			expect(result.status).to.equal(400)
@@ -49,6 +66,14 @@ describe('app/api/auth/register', () => {
 				pass: '12345'
 			})
 
+			// Extract session id
+			const validSessionId = getSessionIdFromHeader(
+				result.headers['set-cookie'][0]
+			)
+
+			// Clean Up
+			MockSession.destroy(validSessionId)
+
 			// Assertions
 			expect(result.status).to.equal(400)
 		})
@@ -61,6 +86,14 @@ describe('app/api/auth/register', () => {
 				pass: '12345'
 			})
 
+			// Extract session id
+			const validSessionId = getSessionIdFromHeader(
+				result.headers['set-cookie'][0]
+			)
+
+			// Clean Up
+			MockSession.destroy(validSessionId)
+
 			// Assertions
 			expect(result.status).to.equal(400)
 		})
@@ -72,6 +105,14 @@ describe('app/api/auth/register', () => {
 				guestData
 			)
 
+			// Extract session id
+			const validSessionId = getSessionIdFromHeader(
+				result.headers['set-cookie'][0]
+			)
+
+			// Clean Up
+			MockSession.destroy(validSessionId)
+
 			// Assertions
 			expect(result.status).to.equal(400)
 		})
@@ -82,6 +123,14 @@ describe('app/api/auth/register', () => {
 				...guestData,
 				pass: '12345'
 			})
+
+			// Extract session id
+			const validSessionId = getSessionIdFromHeader(
+				result.headers['set-cookie'][0]
+			)
+
+			// Clean Up
+			MockSession.destroy(validSessionId)
 
 			// Assertions
 			expect(result.status).to.equal(400)

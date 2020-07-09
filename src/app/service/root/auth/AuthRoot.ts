@@ -1,5 +1,5 @@
 import { crypt } from '~/lib/util'
-import { User } from '~/app/domain'
+import { Session, User } from '~/app/domain'
 import { SessionService, UserService } from '~/app/service/data'
 
 export class AuthRoot {
@@ -41,9 +41,10 @@ export class AuthRoot {
 	 * Login a User
 	 */
 	public async login(
+		session: Session,
 		email: string,
 		password: string
-	): Promise<User | undefined> {
+	): Promise<Session | undefined> {
 		// Find user
 		const user = await this.user.getOneByEmail(email)
 
@@ -56,17 +57,16 @@ export class AuthRoot {
 		// Return
 		if (!valid) return
 
-		// Return user
-		return user
+		// TODO: Update expiresAt to config.session.duration.user
+		// Attach user to session
+		return await this.session.update({ id: session.id, userId: user.id })
 	}
 
 	/*
 	 * Log User Out
 	 */
-	public async logout(sessionId: string): Promise<Boolean> {
+	public async logout(session: Session): Promise<Boolean> {
 		// Expire session
-		// TODO:
-		// return await this.session.expire(sessionId)
-		return false
+		return await this.session.expire(session.id)
 	}
 }

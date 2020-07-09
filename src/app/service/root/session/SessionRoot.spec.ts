@@ -69,35 +69,4 @@ describe('app/service/root/session/SessionRoot', () => {
 			// 	.to.equal(mockSession.id)
 		})
 	})
-
-	describe.skip('expire method', () => {
-		it('success update should return true', async () => {
-			// // Test
-			// const result = await service.getOneById(mockSession.id)
-			// // Assertions
-			// expect(result)
-			// 	.to.have.property('id')
-			// 	.to.equal(mockSession.id)
-		})
-
-		it('failure to update should return false', async () => {
-			// // Test
-			// const result = await service.getOneById(mockSession.id)
-			// // Assertions
-			// expect(result)
-			// 	.to.have.property('id')
-			// 	.to.equal(mockSession.id)
-		})
-	})
-
-	describe.skip('attachUser method', () => {
-		it('success should return Session with userId populated', async () => {
-			// // Test
-			// const result = await service.getOneById(mockSession.id)
-			// // Assertions
-			// expect(result)
-			// 	.to.have.property('id')
-			// 	.to.equal(mockSession.id)
-		})
-	})
 })

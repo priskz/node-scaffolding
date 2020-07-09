@@ -1,7 +1,7 @@
 import moment from 'moment'
 import { config } from '~/config'
-import { Session, User } from '~/app/domain'
-import { SessionService, UserService } from '~/app/service/data'
+import { Session } from '~/app/domain'
+import { SessionService } from '~/app/service/data'
 
 export class SessionRoot {
 	/*
@@ -53,19 +53,5 @@ export class SessionRoot {
 	 */
 	public async touch(id: string): Promise<void> {
 		await this.session.update({ id, activeAt: moment().toDate() })
-	}
-
-	/*
-	 * Expire a Session
-	 */
-	public async expire(id: string): Promise<boolean> {
-		return !!(await this.session.update({ id, expiresAt: moment().toDate() }))
-	}
-
-	/*
-	 * Attach User to a Session
-	 */
-	public async attachUser(sessionId: string): Promise<any> {
-		// TODO:
 	}
 }

@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { MockUser } from '~/test/mocks'
+import { MockSession, MockUser } from '~/test/mocks'
 import { User } from '~/app/domain'
 import { AuthRoot } from './'
 
@@ -31,7 +31,10 @@ describe('app/service/root/auth/AuthRoot', () => {
 	describe('register method', () => {
 		it('valid data should return new User', async () => {
 			// Test
-			mockUser = (await service.register(userData)) as User
+			mockUser = (await service.register({
+				...userData,
+				pass: userData.password
+			})) as User
 
 			// Assertions
 			expect(mockUser).to.have.property('id')
@@ -45,35 +48,67 @@ describe('app/service/root/auth/AuthRoot', () => {
 		it('email exists should throw', async () => {
 			// Assertion
 			expect(async function() {
-				await service.register(userData)
+				await service.register({
+					...userData,
+					pass: userData.password
+				})
 			}).to.throw
 		})
 	})
 
 	describe('login method', () => {
-		it('valid credentials should return new User', async () => {
+		it('valid credentials should return updated Session', async () => {
+			// Create mock
+			const mockSession = await MockSession.create()
+
 			// Test
-			const result = await service.login(userData.email, userData.password)
+			const result = await service.login(
+				mockSession,
+				userData.email,
+				userData.password
+			)
+
+			// Clean up
+			await MockSession.destroy(mockSession)
 
 			// Assertions
 			expect(result)
-				.to.have.property('id')
+				.to.have.property('userId')
 				.equal(mockUser.id)
-			expect(result).to.include.keys(Object.keys(userData))
 		})
 
 		it('invalid credentials should return undefined', async () => {
+			// Create mock
+			const mockSession = await MockSession.create()
+
 			// Test
-			const result = await service.login(userData.email, 'wrongpass')
+			const result = await service.login(
+				mockSession,
+				userData.email,
+				'wrongpass'
+			)
+
+			// Clean up
+			await MockSession.destroy(mockSession)
 
 			// Assertions
 			expect(result).to.be.undefined
 		})
 	})
 
-	describe.skip('logout method', () => {
+	describe('logout method', () => {
 		it('should expire active session', async () => {
-			//
+			// Create mock
+			const mockSession = await MockSession.create({ userId: mockUser.id })
+
+			// Test
+			const result = await service.logout(mockSession)
+
+			// Clean up
+			await MockSession.destroy(mockSession)
+
+			// Assertions
+			expect(result).to.be.true
 		})
 	})
 })
