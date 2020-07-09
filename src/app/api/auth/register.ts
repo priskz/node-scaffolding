@@ -1,13 +1,9 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response } from 'express'
 import { Validator } from 'node-input-validator'
 import { respond } from '~/lib/util'
 import { AuthRoot } from '~/app/service'
 
-export async function register(
-	req: Request,
-	res: Response,
-	next: NextFunction
-): Promise<void> {
+export async function register(req: Request, res: Response): Promise<void> {
 	// Prepare validation
 	const input = new Validator(req.body, {
 		email: 'required|email',
@@ -20,7 +16,7 @@ export async function register(
 	// Invalid?
 	if (!valid) {
 		// Error response
-		respond(req, res, next).error(input.errors, 400)
+		respond(req, res).error(input.errors, 400)
 		return
 	}
 
@@ -33,10 +29,10 @@ export async function register(
 	// Failed?
 	if (!user) {
 		// Error response
-		respond(req, res, next).error(null, 400)
+		respond(req, res).error(null, 400)
 		return
 	}
 
 	// Success
-	respond(req, res, next).success()
+	respond(req, res).success()
 }

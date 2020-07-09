@@ -1,11 +1,7 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response } from 'express'
 import { respond } from '~/lib/util'
 
-export async function info(
-	req: Request,
-	res: Response,
-	next: NextFunction
-): Promise<void> {
+export async function info(req: Request, res: Response): Promise<void> {
 	// Success
-	respond(req, res, next).success({ name: 'New App' })
+	respond(req, res).success({ name: 'New App' })
 }
