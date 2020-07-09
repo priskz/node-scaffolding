@@ -3,11 +3,12 @@ import { Request, Response, NextFunction } from 'express'
 import { config } from '~/config'
 import { respond } from '~/lib/util'
 import { SessionRoot } from '~/app/service'
+import { Session as SessionModel } from '~/app/domain'
 
 /**
- * Attempts to extract the user's IP address from the incoming Express request
+ * Attempt to extract incoming ip address
  */
-export function getUserIP(req: Request): string {
+export function getIpAddress(req: Request): string {
 	// Forwarded address
 	const forwarded = req.headers['x-forwarded-for']
 
@@ -24,10 +25,17 @@ export function getUserIP(req: Request): string {
 }
 
 /**
- * Attempts to extract the user's User Agent data from the incoming Express request
+ * Attempt to extract user agent information
  */
-export function getBrowserAgent(req: Request): string {
+export function getAgent(req: Request): string {
 	return req.headers['user-agent'] || 'No Agent Found'
+}
+
+/**
+ * Check if session is expired
+ */
+export function isExpired(model: SessionModel): boolean {
+	return model && moment() > moment(model.expiresAt)
 }
 
 export async function session(
@@ -35,62 +43,75 @@ export async function session(
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
-	const sessionId =
-		req.signedCookies && req.signedCookies[config.session.cookie]
+	// Signed session cookie?
+	const sessionId = req.signedCookies[config.session.cookie]
 
-	// Tampered cookie?
+	// Invalid or tampered cookie
 	if (sessionId === false) {
 		// Clear cookie
 		res.clearCookie(config.session.cookie)
 
-		// Error
-		respond(req, res, next).error('invalid cookie', 401)
+		// Unauthorized response
+		respond(req, res).error('invalid cookie', 401)
+
+		// Terminate
 		return
 	}
 
+	// Init
 	const service = new SessionRoot()
 
 	// Init
 	let session
 
 	// Is Session ID provided?
-	if (sessionId && typeof sessionId === 'string') {
-		// Retrieve existing
+	if (sessionId) {
+		// Find session
 		session = await service.getOneById(sessionId)
 
-		// Found, but expired?
-		if (session && moment() > moment(session.expiresAt)) {
-			// Create new
-			session = await service.generate(getBrowserAgent(req), getUserIP(req))
-		} else {
-			// Update activity
-			await service.updateActiveAt(sessionId)
+		// Found?
+		if (!session) {
+			// Clear cookie
+			res.clearCookie(config.session.cookie)
+
+			// Unauthorized response
+			respond(req, res).error('not found', 404)
+
+			// Terminate
+			return
 		}
-	} else {
-		// Create new
-		session = await service.generate(getBrowserAgent(req), getUserIP(req))
+
+		// Not expired?
+		if (!isExpired(session)) {
+			// Update activity
+			await service.touch(sessionId)
+		}
 	}
 
-	// Handle invalid / missing sessions
+	// No session? Safe to create a new one!
 	if (!session) {
-		// Clear cookie
-		res.clearCookie(config.session.cookie)
+		// Create
+		session = await service.generate(getAgent(req), getIpAddress(req))
 
-		// Error
-		respond(req, res, next).error('invalid or missing session', 401)
-		return
+		// Assume exception if not able to create
+		if (!session) {
+			// Unknown exception
+			respond(req, res).exception()
+
+			return
+		}
+
+		// Add session cookie to response
+		res.cookie(config.session.cookie, session.id, {
+			expires: session.expiresAt,
+			sameSite: 'strict',
+			signed: true
+		})
 	}
-
-	// Update the cookie
-	await res.cookie(config.session.cookie, session.id, {
-		expires: session.expiresAt,
-		sameSite: 'strict',
-		signed: true
-	})
 
 	// Add session to request
 	req.setSession(session)
 
-	// Move on
+	// Continue request
 	next()
 }

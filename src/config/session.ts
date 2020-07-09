@@ -2,10 +2,7 @@ export const session: SessionConfig = {
 	cookie: 'session',
 	duration: {
 		guest: 30,
-		user: 180
-	},
-	expiration: {
-		minRefreshDays: 1
+		user: 90
 	}
 }
 
@@ -14,8 +11,5 @@ export interface SessionConfig {
 	duration: {
 		guest: number
 		user: number
-	}
-	expiration: {
-		minRefreshDays: number
 	}
 }

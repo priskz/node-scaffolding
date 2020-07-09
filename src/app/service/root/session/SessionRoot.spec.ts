@@ -50,7 +50,7 @@ describe('app/service/root/session/SessionRoot', () => {
 		})
 	})
 
-	describe.skip('updateActiveAt method', () => {
+	describe.skip('touch method', () => {
 		it('shoudl update Session activateAt and return void', async () => {
 			// // Test
 			// const result = await service.getOneById(mockSession.id)
