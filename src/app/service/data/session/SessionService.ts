@@ -11,6 +11,13 @@ export class SessionService extends DataService<Session> {
 	}
 
 	/*
+	 * Get a single Session by id
+	 */
+	public async getOneById(id: string): Promise<Session | undefined> {
+		return await this.getOne({ where: { id } })
+	}
+
+	/*
 	 * Expire a Session
 	 */
 	public async expire(id: string): Promise<boolean> {

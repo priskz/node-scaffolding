@@ -24,13 +24,15 @@ export async function global(
 			}
 		},
 		getSession: {
-			value: function(): Session {
-				return this.context.session
+			value: function(): Session | undefined {
+				if (this.context) return this.context.session
 			}
 		},
 		getUser: {
-			value: function(): User {
-				return this.context.session.user
+			value: function(): User | undefined {
+				if (this.context.session && this.context.session) {
+					return this.context.session.user
+				}
 			}
 		}
 	})

@@ -21,7 +21,7 @@ export class SessionRoot {
 	 */
 	public async generate(
 		agent: string,
-		ipAddress: string
+		ipAddress?: string
 	): Promise<Session | undefined> {
 		// TODO: Clean up time logic
 		// Current time
@@ -45,7 +45,7 @@ export class SessionRoot {
 	 * Get a single Session by id
 	 */
 	public async getOneById(id: string): Promise<Session | undefined> {
-		return await this.session.getOne({ where: { id } })
+		return await this.session.getOne({ where: { id }, embed: ['user'] })
 	}
 
 	/*

@@ -50,23 +50,23 @@ describe('app/service/root/session/SessionRoot', () => {
 		})
 	})
 
-	describe.skip('touch method', () => {
-		it('shoudl update Session activateAt and return void', async () => {
-			// // Test
-			// const result = await service.getOneById(mockSession.id)
-			// // Assertions
-			// expect(result)
-			// 	.to.have.property('id')
-			// 	.to.equal(mockSession.id)
-		})
+	describe('touch method', () => {
+		it('should update Session activateAt and return void', async () => {
+			// Current session
+			const beforeSession = (await service.getOneById(
+				mockSession.id
+			)) as Session
 
-		it('failure to update should return false', async () => {
-			// // Test
-			// const result = await service.getOneById(mockSession.id)
-			// // Assertions
-			// expect(result)
-			// 	.to.have.property('id')
-			// 	.to.equal(mockSession.id)
+			// Test1
+			const result1 = await service.touch(beforeSession.id)
+
+			// Test2
+			const result2 = (await service.getOneById(mockSession.id)) as Session
+
+			// Assertions
+			expect(result1).to.be.undefined
+			expect(result2.activeAt).to.not.equal(beforeSession.activeAt)
+			expect(result2.updatedAt).to.not.equal(beforeSession.updatedAt)
 		})
 	})
 })

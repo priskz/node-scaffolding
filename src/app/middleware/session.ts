@@ -8,7 +8,7 @@ import { Session as SessionModel } from '~/app/domain'
 /**
  * Attempt to extract incoming ip address
  */
-export function getIpAddress(req: Request): string {
+export function getIpAddress(req: Request): string | undefined {
 	// Forwarded address
 	const forwarded = req.headers['x-forwarded-for']
 
@@ -20,8 +20,6 @@ export function getIpAddress(req: Request): string {
 
 	// Next, try the direct connection IP
 	if (direct) return direct
-
-	return 'No IP Found'
 }
 
 /**
@@ -90,16 +88,11 @@ export async function session(
 
 	// No session? Safe to create a new one!
 	if (!session) {
-		// Create
-		session = await service.generate(getAgent(req), getIpAddress(req))
-
-		// Assume exception if not able to create
-		if (!session) {
-			// Unknown exception
-			respond(req, res).exception()
-
-			return
-		}
+		// Create new session
+		session = (await service.generate(
+			getAgent(req),
+			getIpAddress(req)
+		)) as SessionModel
 
 		// Add session cookie to response
 		res.cookie(config.session.cookie, session.id, {
