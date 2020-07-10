@@ -5,6 +5,13 @@ import { config } from '~/config'
 import { AuthRoot } from '~/app/service'
 
 export async function login(req: Request, res: Response): Promise<void> {
+	// Session have a user?
+	if (req.getUser()) {
+		// Error response
+		respond(req, res).error()
+		return
+	}
+
 	// Prepare validation
 	const input = new Validator(req.body, {
 		email: 'required|email',
