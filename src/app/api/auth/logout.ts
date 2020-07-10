@@ -18,14 +18,7 @@ export async function logout(req: Request, res: Response): Promise<void> {
 	const service = new AuthRoot()
 
 	// Attempt logout
-	const loggedOut = await service.logout(session)
-
-	// Failed login?
-	if (!loggedOut) {
-		// Error response
-		respond(req, res).exception()
-		return
-	}
+	await service.logout(session)
 
 	// Clear cookie
 	res.clearCookie(config.session.cookie)
