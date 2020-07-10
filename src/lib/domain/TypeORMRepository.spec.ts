@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { MockUser } from '~/test/mocks'
+import { MockSession, MockUser } from '~/test/mocks'
 import { getRepository } from 'typeorm'
 import { TypeORMRepository } from './TypeORMRepository'
 import { User } from '~/app/domain'
@@ -20,6 +20,7 @@ describe('lib/domain/TypeORMRepository', () => {
 	// Test Unit
 	let repo: TypeORMRepository<User>
 	let softDeleteRepo: TypeORMRepository<User>
+	let eagerLoadRepo: TypeORMRepository<User>
 
 	after(async () => {
 		// Clean up
@@ -38,6 +39,16 @@ describe('lib/domain/TypeORMRepository', () => {
 		it('with optional softDelete param it should return a new instance of TypeORMRepository', async () => {
 			// Test
 			softDeleteRepo = new TypeORMRepository(getRepository(User), true)
+
+			// Assertions
+			expect(repo).to.be.an.instanceOf(TypeORMRepository)
+		})
+
+		it('with optional eager param it should return a new instance of TypeORMRepository', async () => {
+			// Test
+			eagerLoadRepo = new TypeORMRepository(getRepository(User), false, [
+				'session'
+			])
 
 			// Assertions
 			expect(repo).to.be.an.instanceOf(TypeORMRepository)
@@ -70,7 +81,7 @@ describe('lib/domain/TypeORMRepository', () => {
 		})
 	})
 
-	describe('when get method is given no arguments ', () => {
+	describe('when get method is given no arguments', () => {
 		it('should return an array of records ', async () => {
 			// Test
 			const result = await repo.get()
@@ -78,6 +89,19 @@ describe('lib/domain/TypeORMRepository', () => {
 			// Assertions
 			expect(result).to.have.lengthOf(1)
 			expect(result[0]).to.have.keys(Object.keys(mockData))
+			expect(result[0]).to.have.property('updatedAt').to.be.not.null
+		})
+
+		it('on eager loaded repo it should return an array of records that have a session field', async () => {
+			// Create related record
+			await MockSession.create({ userId: mockUser.id })
+
+			// Test
+			const result = await eagerLoadRepo.get()
+
+			// Assertions
+			expect(result).to.have.lengthOf(1)
+			expect(result[0]).to.have.keys(Object.keys(mockData).concat('session'))
 			expect(result[0]).to.have.property('updatedAt').to.be.not.null
 		})
 	})
@@ -233,6 +257,15 @@ describe('lib/domain/TypeORMRepository', () => {
 			expect(result[0])
 				.to.have.property('id')
 				.equal(mockRecord[2].id)
+		})
+
+		it('skip without take option given should throw', async () => {
+			// Test & Assertions
+			expect(async function() {
+				await repo.get({
+					query: { skip: 2 }
+				})
+			}).to.throw
 		})
 
 		it('order option is given', async () => {

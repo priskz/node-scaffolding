@@ -1,5 +1,4 @@
 import {
-	DeleteResult,
 	FindManyOptions,
 	Repository,
 	Not,
@@ -11,7 +10,6 @@ import {
 	Like,
 	Between,
 	In,
-	Any,
 	IsNull,
 	Raw,
 	SaveOptions
@@ -27,19 +25,24 @@ export class TypeORMRepository<T> {
 	/*
 	 * Soft Delete (populates deletedAt instead of actual delete)
 	 */
-	protected softDeletes: boolean = false
+	protected softDeletes: boolean
 
 	/*
 	 * Eager loading configuration.
 	 */
-	protected eager = []
+	protected eager: string[]
 
 	/*
 	 * Construct
 	 */
-	constructor(repository: Repository<T>, softDeletes = false) {
+	constructor(
+		repository: Repository<T>,
+		softDeletes = false,
+		eager: string[] = []
+	) {
 		this.repository = repository
 		this.softDeletes = softDeletes
+		this.eager = eager
 	}
 
 	/*
@@ -150,8 +153,13 @@ export class TypeORMRepository<T> {
 		let skip = 0
 		let take = undefined
 		let where = undefined
-		let relations: string[] = this.eager
+		let relations: string[] = []
 		let loadEagerRelations = relations.length > 0 ? true : false
+
+		// Add configured eager relations
+		for (let i = 0; i < this.eager.length; i++) {
+			relations.push(this.eager[i])
+		}
 
 		// Query config given?
 		if (config.query) {
@@ -162,7 +170,6 @@ export class TypeORMRepository<T> {
 			if (config.query.embed) {
 				// Iterate embed
 				for (let i = 0; i < config.query.embed.length; i++) {
-					// Add to
 					relations.push(config.query.embed[i])
 				}
 
@@ -184,7 +191,7 @@ export class TypeORMRepository<T> {
 				if (take) {
 					skip = config.query.skip
 				} else {
-					throw Error('Offset Without Limit Not Supported Error')
+					throw Error('Skip Without Take Not Supported')
 				}
 			}
 
