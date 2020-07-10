@@ -3,9 +3,19 @@ import { User } from './User'
 
 export class UserCache extends DefaultCache {
 	/**
+	 * Cache storage key prefix
+	 */
+	protected prefix = 'user'
+
+	/**
+	 * The _client storage bucket this should act upon
+	 */
+	protected bucket = 1
+
+	/**
 	 * Fetch model from cache. Optionally, cache a fresh copy if it doesn't exist
 	 */
-	public async fetch(id: number, cache = true): Promise<{} | undefined> {
+	public async fetch(id: number, cache = true): Promise<User | undefined> {
 		// Find in cache
 		const data = await this.getRaw(id)
 
@@ -33,30 +43,39 @@ export class UserCache extends DefaultCache {
 	/**
 	 * Save model in cache by given id
 	 */
-	public async saveById(id: number): Promise<void> {
+	public async saveById(id: number): Promise<boolean> {
 		// Fresh user data to cache
 		const user = await this.getSource(id)
 
+		// Cant cache missing user
+		if (!user) {
+			return false
+		}
+
 		// Convert to JSON and set cache value
-		if (user) await this.set(user.id, JSON.stringify(user))
+		return await this.set(user.id, JSON.stringify(user))
 	}
 
 	/**
 	 * Save given model in cache
 	 */
-	public async save(data: User, refresh = false): Promise<void> {
+	public async save(data: User, refresh = false): Promise<boolean> {
 		// User data
 		let user: User = data
 
 		// Retrieve fresh data if flagged
 		if (refresh) {
-			const sourceUser = await this.getSource(data.id)
+			const source = await this.getSource(data.id)
 
-			if (sourceUser) user = sourceUser
+			if (source) {
+				user = source
+			} else {
+				return false
+			}
 		}
 
 		// Convert to JSON and set cache value
-		await this.set(user.id, JSON.stringify(user))
+		return await this.set(user.id, JSON.stringify(user))
 	}
 
 	/**

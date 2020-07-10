@@ -4,7 +4,7 @@ import { User } from '~/app/domain'
 import { UserCache } from '~/app/domain'
 
 describe('src/app/domain/user/UserCache', () => {
-	// Test Subject
+	// Unit
 	let userCache: UserCache
 
 	// Mock User
@@ -17,7 +17,7 @@ describe('src/app/domain/user/UserCache', () => {
 
 	after(async () => {
 		// Clean up
-		await userCache.client().remove(userCache.parseKey(mockUser.id))
+		await userCache.flush()
 		await userCache.client().disconnect()
 		await MockUser.destroy(mockUser.id)
 	})
@@ -32,77 +32,124 @@ describe('src/app/domain/user/UserCache', () => {
 		})
 	})
 
-	describe('saveById && fetch methods', () => {
-		it('should add to cache by id and return cached data value', async () => {
-			// Add to cache
-			await userCache.saveById(mockUser.id)
-
+	describe('getSource method', () => {
+		it('should return raw data from source', async () => {
 			// Test
-			const result = (await userCache.fetch(mockUser.id)) as User
-
-			// Clean Up
-			await userCache.client().remove(userCache.parseKey(mockUser.id))
+			const result = (await userCache.getSource(mockUser.id)) as User
 
 			// Assertions
-			expect(result.email).to.be.equal(mockUser.email)
-			expect(result.firstName).to.be.equal(mockUser.firstName)
-			expect(result.lastName).to.be.equal(mockUser.lastName)
-			expect(result.country).to.be.equal(mockUser.country)
+			expect(result.id).to.equal(mockUser.id)
+			expect(result.firstName).to.equal(mockUser.firstName)
+			expect(result.email).to.equal(mockUser.email)
 		})
-	})
 
-	describe('fetch method on uncached resource', () => {
-		it('should add to cache by id and return cached data value', async () => {
-			// Cache Key
-			const key = userCache.parseKey(mockUser.id)
-
-			// Test 1: Check cache for value
-			const result1 = await userCache.client().get(key)
-
-			// Now add to cache
-			await userCache.saveById(mockUser.id)
-
-			// Test2: Add to cache while fetching
-			const result2 = (await userCache.fetch(mockUser.id)) as User
-
-			// Clean Up
-			await userCache.client().remove(key)
+		it('should return undefined if not found', async () => {
+			// Test
+			const result = (await userCache.getSource(0)) as User
 
 			// Assertions
-			expect(result1).to.be.null
-			expect(result2.email).to.be.equal(mockUser.email)
-			expect(result2.firstName).to.be.equal(mockUser.firstName)
-			expect(result2.lastName).to.be.equal(mockUser.lastName)
-			expect(result2.country).to.be.equal(mockUser.country)
+			expect(result).to.be.undefined
 		})
 	})
 
 	describe('save method', () => {
-		it('should add given model to cache', async () => {
-			// Add to cache
-			await userCache.save(mockUser)
-
-			// Cache key
-			const key = userCache.parseKey(mockUser.id)
-
+		it('should set given User in cache and return true', async () => {
 			// Test
-			const result = await userCache.fetch(mockUser.id, false)
-
-			// Clean Up
-			await userCache.client().remove(key)
+			const result = await userCache.save(mockUser)
 
 			// Assertions
-			expect(result).to.not.be.undefined
+			expect(result).to.be.true
+		})
+
+		it('when refresh param is true it should retrieve from source, set given User in cache, and return true', async () => {
+			// Test
+			const result = await userCache.save(mockUser, true)
+
+			// Clean up
+			await userCache.flush()
+
+			// Assertions
+			expect(result).to.be.true
+		})
+
+		it('when refresh param is true and id does not exist in source it should return false', async () => {
+			// Mock
+			const missingUser = { id: 0 } as User
+
+			// Test
+			const result = await userCache.save(missingUser, true)
+
+			// Assertions
+			expect(result).to.be.false
 		})
 	})
 
-	describe('getSource method', () => {
-		it('should return raw source value from database', async () => {
+	describe('saveById method', () => {
+		it('should return true if found and set in cache', async () => {
 			// Test
-			const result = await userCache.getSource(mockUser.id)
+			const result = await userCache.saveById(mockUser.id)
+
+			// Clean up
+			await userCache.flush()
 
 			// Assertions
-			expect(result).to.not.be.undefined
+			expect(result).to.be.true
+		})
+
+		it('should return false if not found in source', async () => {
+			// Test
+			const result = await userCache.saveById(0)
+
+			// Assertions
+			expect(result).to.be.false
+		})
+	})
+
+	describe('fetch method', () => {
+		it('if optional param is false it should return undefined if not found in cache', async () => {
+			// Test
+			const result = await userCache.fetch(mockUser.id, false)
+
+			// Assertions
+			expect(result).to.be.undefined
+		})
+
+		it('if not in cache, should retrieve from source, add to cache, and return User', async () => {
+			// Test
+			const result = (await userCache.fetch(mockUser.id)) as User
+
+			// Assertions
+			expect(result.id).to.equal(mockUser.id)
+			expect(result.firstName).to.equal(mockUser.firstName)
+			expect(result.email).to.equal(mockUser.email)
+		})
+
+		it('if in cache and optional cache param is false, it should return User', async () => {
+			// Test
+			const result = (await userCache.fetch(mockUser.id, false)) as User
+
+			// Assertions
+			expect(result.id).to.equal(mockUser.id)
+			expect(result.firstName).to.equal(mockUser.firstName)
+			expect(result.email).to.equal(mockUser.email)
+		})
+
+		it('if in cache and no optional param is given it should return User', async () => {
+			// Test
+			const result = (await userCache.fetch(mockUser.id)) as User
+
+			// Assertions
+			expect(result.id).to.equal(mockUser.id)
+			expect(result.firstName).to.equal(mockUser.firstName)
+			expect(result.email).to.equal(mockUser.email)
+		})
+
+		it('if source not found should return undefined', async () => {
+			// Test
+			const result = (await userCache.fetch(0)) as User
+
+			// Assertions
+			expect(result).to.be.undefined
 		})
 	})
 })
