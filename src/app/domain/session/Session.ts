@@ -7,7 +7,7 @@ import {
 	ManyToOne,
 	PrimaryGeneratedColumn
 } from 'typeorm'
-import { User } from '../user/User'
+import { User } from '../user'
 
 @Entity('session')
 export class Session extends BaseEntity {

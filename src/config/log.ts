@@ -8,7 +8,7 @@ export const log: LogConfig = {
 				type: 'file',
 				options: {
 					level: 'info',
-					filename: `./log/app.${process.env.NODE_ENV || 'development'}.log`,
+					filename: `./log/app.${process.env.NODE_ENV}.log`,
 					handleExceptions: true,
 					maxsize: 5242880, // 5MB
 					maxFiles: 5
