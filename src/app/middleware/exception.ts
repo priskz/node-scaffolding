@@ -15,9 +15,9 @@ export async function exception(
 
 	// Respond with exception if in debug mode
 	if (env('DEBUG_MODE')) {
-		respond(req, res).exception(`Exception: ${error.message}`)
+		respond(req, res).exception(error.message)
 	}
 
-	// TODO: Public Exception Message(s)
-	respond(req, res).exception(error.message)
+	// Public Response
+	respond(req, res).exception()
 }
