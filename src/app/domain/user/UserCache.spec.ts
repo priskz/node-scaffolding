@@ -12,7 +12,9 @@ describe('src/app/domain/user/UserCache', () => {
 
 	before(async () => {
 		// Create a mock userclear
-		mockUser = await MockUser.create({ email: 'UserCache@unit-test.com' })
+		mockUser = (await MockUser.create({
+			email: 'UserCache@unit-test.com'
+		})) as User
 	})
 
 	after(async () => {

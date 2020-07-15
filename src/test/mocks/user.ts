@@ -1,5 +1,6 @@
 import { UserSeed } from '~/test/seeds'
 import { User } from '~/app/domain'
+import { UserService } from '~/app/service'
 
 /**
  *  Get primary mock user email
@@ -25,7 +26,7 @@ function getPrimaryMockUserPassword(): string {
 /**
  * Create a user in the database
  */
-async function create(options: CreateOptions = {}): Promise<User> {
+async function create(options: CreateOptions = {}): Promise<User | undefined> {
 	// Set default prop values and then update with given overrides
 	const option: CreateOptions = {
 		email: 'test@email.com',
@@ -36,37 +37,36 @@ async function create(options: CreateOptions = {}): Promise<User> {
 		...options
 	}
 
-	// Init mock as an extended interface with props exposed as iterable
-	const mockUser = new User() as TestUser
+	// Init
+	const service = new UserService()
 
-	// Set props
-	for (const key in option) {
-		mockUser[key] = option[key]
-	}
-
-	// Save
-	return await mockUser.save()
+	// Create
+	return await service.create(option)
 }
 
-/**
+/*
  * Delete a user from the database by id or email
  */
-async function destroy(id: number | string): Promise<void> {
-	if (typeof id == 'number') {
-		// Delete by email
-		const user = new User()
+async function destroy(id: number): Promise<void> {
+	// Init
+	const service = new UserService()
 
-		user.id = id
+	// Delete
+	return await service.delete(id)
+}
 
-		await user.remove()
-	} else if (typeof id == 'string') {
-		// Delete by email
-		const user = await User.find({
-			where: { email: id }
-		})
+/*
+ * Delete a user from the database by id or email
+ */
+async function destroyByEmail(email: string): Promise<void> {
+	// Init
+	const service = new UserService()
 
-		await user[0].remove()
-	}
+	// Find user by email
+	const user = await service.getOneByEmail(email)
+
+	// Delete if found
+	if (user) await service.delete(user.id)
 }
 
 /**
@@ -125,7 +125,7 @@ async function deleteSeeds(): Promise<void> {
 
 	// Iterate user data
 	for (let i = 0; i < seed.length; i++) {
-		await destroy(seed[i].email)
+		await destroyByEmail(seed[i].email)
 	}
 }
 
@@ -135,17 +135,17 @@ async function deleteSeeds(): Promise<void> {
 async function getSeededUser(
 	email: string = getPrimaryMockUserEmail()
 ): Promise<User> {
-	const user = await User.findOne({
-		where: { email: email },
-		relations: [],
-		loadEagerRelations: true
-	})
+	// Init
+	const service = new UserService()
 
-	if (!user) {
-		throw Error('Seeded user data does not exist!')
-	}
+	// Find user by email
+	const user = await service.getOneByEmail(email)
 
-	return user
+	// Return if found
+	if (user) return user
+
+	// Otherwise throw
+	throw Error('Seeded user data does not exist!')
 }
 
 interface CreateOptions {
@@ -180,6 +180,7 @@ export const MockUser = {
 	create,
 	guest,
 	destroy,
+	destroyByEmail,
 	createSeeds,
 	deleteSeeds,
 	getSeededUser,

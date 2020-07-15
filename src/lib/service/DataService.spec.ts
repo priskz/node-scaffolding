@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { getCustomRepository } from 'typeorm'
 import { MockUser } from '~/test/mocks'
 import { UserRepository } from '~/app/domain'
 import { DataService } from './DataService'
@@ -28,7 +29,7 @@ describe('lib/service/DataService', () => {
 	describe('when constructor is called', () => {
 		it('should return new instance of DataService', async () => {
 			// Test
-			service = new DataService(new UserRepository())
+			service = new DataService(getCustomRepository(UserRepository))
 
 			// Assertions
 			expect(service).to.be.an.instanceOf(DataService)

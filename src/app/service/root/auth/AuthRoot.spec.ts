@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { MockSession, MockUser } from '~/test/mocks'
-import { User } from '~/app/domain'
+import { Session, User } from '~/app/domain'
 import { AuthRoot } from './'
 
 describe('app/service/root/auth/AuthRoot', () => {
@@ -59,7 +59,7 @@ describe('app/service/root/auth/AuthRoot', () => {
 	describe('login method', () => {
 		it('valid credentials should return updated Session', async () => {
 			// Create mock
-			const mockSession = await MockSession.create()
+			const mockSession = (await MockSession.create()) as Session
 
 			// Test
 			const result = await service.login(
@@ -69,7 +69,7 @@ describe('app/service/root/auth/AuthRoot', () => {
 			)
 
 			// Clean up
-			await MockSession.destroy(mockSession)
+			await MockSession.destroy(mockSession.id)
 
 			// Assertions
 			expect(result)
@@ -79,7 +79,7 @@ describe('app/service/root/auth/AuthRoot', () => {
 
 		it('invalid credentials should return undefined', async () => {
 			// Create mock
-			const mockSession = await MockSession.create()
+			const mockSession = (await MockSession.create()) as Session
 
 			// Test
 			const result = await service.login(
@@ -89,7 +89,7 @@ describe('app/service/root/auth/AuthRoot', () => {
 			)
 
 			// Clean up
-			await MockSession.destroy(mockSession)
+			await MockSession.destroy(mockSession.id)
 
 			// Assertions
 			expect(result).to.be.undefined
@@ -99,13 +99,15 @@ describe('app/service/root/auth/AuthRoot', () => {
 	describe('logout method', () => {
 		it('should expire active session', async () => {
 			// Create mock
-			const mockSession = await MockSession.create({ userId: mockUser.id })
+			const mockSession = (await MockSession.create({
+				userId: mockUser.id
+			})) as Session
 
 			// Test
 			const result = await service.logout(mockSession)
 
 			// Clean up
-			await MockSession.destroy(mockSession)
+			await MockSession.destroy(mockSession.id)
 
 			// Assertions
 			expect(result).to.be.true

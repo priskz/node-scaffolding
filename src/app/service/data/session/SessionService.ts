@@ -1,13 +1,14 @@
 import moment from 'moment'
 import { DataService } from '~/lib/service/DataService'
 import { Session, SessionRepository } from '~/app/domain'
+import { getCustomRepository } from 'typeorm'
 
 export class SessionService extends DataService<Session> {
 	/*
 	 * Construct
 	 */
 	constructor() {
-		super(new SessionRepository())
+		super(getCustomRepository(SessionRepository))
 	}
 
 	/*

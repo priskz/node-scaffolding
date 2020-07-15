@@ -12,7 +12,7 @@ describe('app/service/data/session/SessionService', () => {
 
 	before(async () => {
 		// Clean up
-		mockSession = await MockSession.create()
+		mockSession = (await MockSession.create()) as Session
 	})
 
 	after(async () => {

@@ -1,12 +1,13 @@
 import { DataService } from '~/lib/service/DataService'
 import { User, UserRepository } from '~/app/domain'
+import { getCustomRepository } from 'typeorm'
 
 export class UserService extends DataService<User> {
 	/*
 	 * Construct
 	 */
 	constructor() {
-		super(new UserRepository())
+		super(getCustomRepository(UserRepository))
 	}
 
 	/*

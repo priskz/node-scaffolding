@@ -3,7 +3,6 @@ import { AxiosResponse } from 'axios'
 import { appRequest } from '~/test/util'
 import { MockSession, MockUser } from '~/test/mocks'
 import { getSessionIdFromHeader } from '~/test/util'
-import { config } from '~/config'
 
 //----- Tests -----//
 
@@ -31,7 +30,7 @@ describe('api/auth/logout', () => {
 	after(async () => {
 		// Clean up
 		await MockSession.destroy(registerSessionId)
-		await MockUser.destroy(guestData.email)
+		await MockUser.destroyByEmail(guestData.email)
 	})
 
 	describe('valid cookie is provided', () => {

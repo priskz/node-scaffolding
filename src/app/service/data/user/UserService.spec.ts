@@ -12,7 +12,7 @@ describe('app/service/data/user/UserService', () => {
 
 	before(async () => {
 		// Clean up
-		mockUser = await MockUser.create()
+		mockUser = (await MockUser.create()) as User
 	})
 
 	after(async () => {

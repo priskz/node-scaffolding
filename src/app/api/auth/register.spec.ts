@@ -12,7 +12,7 @@ describe('app/api/auth/register', () => {
 
 	after(async () => {
 		// Clean up
-		await MockUser.destroy(guestData.email)
+		await MockUser.destroyByEmail(guestData.email)
 	})
 
 	describe('valid input', () => {

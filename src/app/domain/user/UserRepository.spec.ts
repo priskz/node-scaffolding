@@ -1,5 +1,6 @@
 import { expect } from 'chai'
-import { UserRepository } from '.'
+import { getCustomRepository } from 'typeorm'
+import { UserRepository } from './'
 
 describe('app/domain/user/UserRepository', () => {
 	// Unit
@@ -8,7 +9,7 @@ describe('app/domain/user/UserRepository', () => {
 	describe('constructor method', () => {
 		it('should return new instance of UserRepository', async () => {
 			// Test
-			repository = new UserRepository()
+			repository = getCustomRepository(UserRepository)
 
 			// Assertions
 			expect(repository).to.be.an.instanceOf(UserRepository)

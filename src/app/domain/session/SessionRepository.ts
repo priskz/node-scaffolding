@@ -1,12 +1,6 @@
-import { getRepository } from 'typeorm'
+import { EntityRepository } from 'typeorm'
 import { TypeORMRepository } from '~/lib/domain/TypeORMRepository'
-import { Session } from './Session'
+import { Session } from './'
 
-export class SessionRepository extends TypeORMRepository<Session> {
-	/**
-	 * Construct
-	 */
-	constructor() {
-		super(getRepository(Session))
-	}
-}
+@EntityRepository(Session)
+export class SessionRepository extends TypeORMRepository<Session> {}

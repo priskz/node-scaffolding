@@ -22,7 +22,7 @@ describe('api/auth/login', () => {
 
 	after(async () => {
 		// Clean up
-		await MockUser.destroy(guestData.email)
+		await MockUser.destroyByEmail(guestData.email)
 	})
 
 	describe('valid credentials && session cookie is provided', () => {
@@ -33,13 +33,16 @@ describe('api/auth/login', () => {
 		let cookie: string
 
 		before(async () => {
-			session = await MockSession.create()
+			// Create
+			session = (await MockSession.create()) as Session
+
+			// Generate cookie
 			cookie = MockSession.getCookie(session.id)
 		})
 
 		after(async () => {
 			// Clean Up
-			await MockSession.destroy(session)
+			await MockSession.destroy(session.id)
 		})
 
 		it('should return 204 No Content', async () => {

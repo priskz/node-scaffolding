@@ -1,6 +1,5 @@
 /* istanbul ignore file */
 import {
-	BaseEntity,
 	Column,
 	DeleteDateColumn,
 	Entity,
@@ -10,7 +9,7 @@ import {
 import { User } from '../user'
 
 @Entity('session')
-export class Session extends BaseEntity {
+export class Session {
 	@PrimaryGeneratedColumn('uuid')
 	id!: string
 

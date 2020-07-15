@@ -1,6 +1,6 @@
 import {
+	AbstractRepository,
 	FindManyOptions,
-	Repository,
 	Not,
 	LessThan,
 	LessThanOrEqual,
@@ -12,37 +12,47 @@ import {
 	In,
 	IsNull,
 	Raw,
-	SaveOptions
+	ObjectID,
+	FindOneOptions,
+	SaveOptions,
+	SelectQueryBuilder
 } from 'typeorm'
 import { GetConfig } from './'
 
-export class TypeORMRepository<T> {
-	/*
-	 * TypeORM Repository
-	 */
-	protected repository: Repository<T>
-
+export class TypeORMRepository<T> extends AbstractRepository<T> {
 	/*
 	 * Soft Delete (populates deletedAt instead of actual delete)
 	 */
-	protected softDeletes: boolean
+	protected softDeletes: boolean = false
 
 	/*
 	 * Eager loading configuration.
 	 */
-	protected eager: string[]
+	protected eager: string[] = []
 
 	/*
-	 * Construct
+	 * Find one by id
 	 */
-	constructor(
-		repository: Repository<T>,
-		softDeletes = false,
-		eager: string[] = []
-	) {
-		this.repository = repository
-		this.softDeletes = softDeletes
-		this.eager = eager
+	public async findOneById(
+		id: string | number | Date | ObjectID,
+		options?: FindOneOptions
+	): Promise<T | undefined> {
+		return this.repository.findOne(id, options)
+	}
+
+	/*
+	 * Executes a raw SQL query and returns a raw database results.
+	 * Raw query execution is supported only by relational databases (MongoDB is not supported).
+	 */
+	public async raw(query: string, parameters?: any[]): Promise<any> {
+		return await this.repository.query(query, parameters)
+	}
+
+	/*
+	 * Creates a new query builder that can be used to build a sql query.
+	 */
+	public getQueryBuilder(): SelectQueryBuilder<T> {
+		return this.repository.createQueryBuilder()
 	}
 
 	/*
@@ -288,5 +298,33 @@ export class TypeORMRepository<T> {
 			skip,
 			take
 		}
+	}
+
+	/*
+	 * Set eager property
+	 */
+	public setEager(eager: string[]): void {
+		this.eager = eager
+	}
+
+	/*
+	 * Set softDeletes property
+	 */
+	public setSoftDeletes(softDeletes: boolean): void {
+		this.softDeletes = softDeletes
+	}
+
+	/*
+	 * Get eager property
+	 */
+	public getEager(): string[] {
+		return this.eager
+	}
+
+	/*
+	 * Get softDeletes property
+	 */
+	public getSoftDeletes(): boolean {
+		return this.softDeletes
 	}
 }

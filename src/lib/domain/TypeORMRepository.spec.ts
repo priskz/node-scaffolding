@@ -1,8 +1,8 @@
 import { expect } from 'chai'
 import { MockSession, MockUser } from '~/test/mocks'
-import { getRepository } from 'typeorm'
+import { getCustomRepository, SelectQueryBuilder } from 'typeorm'
 import { TypeORMRepository } from './TypeORMRepository'
-import { User } from '~/app/domain'
+import { User, UserRepository } from '~/app/domain'
 
 describe('lib/domain/TypeORMRepository', () => {
 	// Mock Data
@@ -19,8 +19,6 @@ describe('lib/domain/TypeORMRepository', () => {
 
 	// Test Unit
 	let repo: TypeORMRepository<User>
-	let softDeleteRepo: TypeORMRepository<User>
-	let eagerLoadRepo: TypeORMRepository<User>
 
 	after(async () => {
 		// Clean up
@@ -30,28 +28,20 @@ describe('lib/domain/TypeORMRepository', () => {
 	describe('when constructor is called', () => {
 		it('should return new instance of TypeORMRepository', async () => {
 			// Test
-			repo = new TypeORMRepository(getRepository(User))
+			repo = getCustomRepository(UserRepository)
 
 			// Assertions
 			expect(repo).to.be.an.instanceOf(TypeORMRepository)
 		})
+	})
 
-		it('with optional softDelete param it should return a new instance of TypeORMRepository', async () => {
+	describe('when getQueryBuilder is called', () => {
+		it('should return new instance of TypeORMRepository', async () => {
 			// Test
-			softDeleteRepo = new TypeORMRepository(getRepository(User), true)
+			const result = repo.getQueryBuilder()
 
 			// Assertions
-			expect(repo).to.be.an.instanceOf(TypeORMRepository)
-		})
-
-		it('with optional eager param it should return a new instance of TypeORMRepository', async () => {
-			// Test
-			eagerLoadRepo = new TypeORMRepository(getRepository(User), false, [
-				'session'
-			])
-
-			// Assertions
-			expect(repo).to.be.an.instanceOf(TypeORMRepository)
+			expect(result).to.be.an.instanceOf(SelectQueryBuilder)
 		})
 	})
 
@@ -63,6 +53,16 @@ describe('lib/domain/TypeORMRepository', () => {
 			// Assertions
 			expect(mockUser).to.have.keys(Object.keys(mockData))
 			expect(mockUser).to.include(mockData)
+		})
+	})
+
+	describe('when raw is called', () => {
+		it('should return new instance of TypeORMRepository', async () => {
+			// Test
+			const result = await repo.raw(`SELECT * FROM user`)
+
+			// Assertions
+			expect(result.length).to.equal(1)
 		})
 	})
 
@@ -91,19 +91,6 @@ describe('lib/domain/TypeORMRepository', () => {
 			expect(result[0]).to.have.keys(Object.keys(mockData))
 			expect(result[0]).to.have.property('updatedAt').to.be.not.null
 		})
-
-		it('on eager loaded repo it should return an array of records that have a session field', async () => {
-			// Create related record
-			await MockSession.create({ userId: mockUser.id })
-
-			// Test
-			const result = await eagerLoadRepo.get()
-
-			// Assertions
-			expect(result).to.have.lengthOf(1)
-			expect(result[0]).to.have.keys(Object.keys(mockData).concat('session'))
-			expect(result[0]).to.have.property('updatedAt').to.be.not.null
-		})
 	})
 
 	describe('when getWithCount method is given no arguments', () => {
@@ -127,28 +114,6 @@ describe('lib/domain/TypeORMRepository', () => {
 			// Assertions
 			expect(result).to.have.keys(Object.keys(mockData))
 			expect(result).to.have.property('updatedAt').to.be.not.null
-		})
-	})
-
-	describe('delete method when softDeletes property is true', () => {
-		it('should return true when successfully deleted and update deletedAt', async () => {
-			// Test1
-			const result1 = await softDeleteRepo.delete(mockUser.id)
-
-			// Test 2
-			const result2 = await softDeleteRepo.getOne()
-
-			// Assertions
-			expect(result1).to.be.true
-			expect(result2).to.be.undefined
-		})
-
-		it('should return false when not successfully deleted', async () => {
-			// Test
-			const result = await softDeleteRepo.delete(9999)
-
-			// Assertions
-			expect(result).to.be.false
 		})
 	})
 
@@ -487,6 +452,86 @@ describe('lib/domain/TypeORMRepository', () => {
 			for (let i = 0; i < mockRecord.length; i++) {
 				await MockUser.destroy(mockRecord[i].id)
 			}
+		})
+	})
+
+	describe('setEager && getEager methods', () => {
+		it('should set/get eager property value', async () => {
+			// Test value
+			const testEager = ['session']
+
+			// Set value
+			repo.setEager(testEager)
+
+			// Test
+			const result = repo.getEager()
+
+			// Assertions
+			expect(result).to.equal(testEager)
+		})
+	})
+
+	describe('when get method is given no arguments', () => {
+		it('on eager loaded repo it should return an array of records that have a session field', async () => {
+			// Test
+			const newMockUser = (await repo.create(mockData)) as User
+
+			// Create related record
+			await MockSession.create({ userId: newMockUser.id })
+
+			// Test
+			const result = await repo.get()
+
+			// Clean Up
+			await MockUser.destroy(newMockUser.id)
+
+			// Assertions
+			expect(result).to.have.lengthOf(1)
+			expect(result[0]).to.have.keys(Object.keys(mockData).concat('session'))
+		})
+	})
+
+	describe('setSoftDeletes && getSoftDeletes methods', () => {
+		it('should set/get softDeletes property value', async () => {
+			// Test value
+			const testSoftDeletes = true
+
+			// Set value
+			repo.setSoftDeletes(testSoftDeletes)
+
+			// Test
+			const result = repo.getSoftDeletes()
+
+			// Assertions
+			expect(result).to.equal(testSoftDeletes)
+		})
+	})
+
+	describe('delete method when softDeletes property is true', () => {
+		it('should return true when successfully deleted and update deletedAt', async () => {
+			// Test
+			const newMockUser = (await repo.create(mockData)) as User
+
+			// Test1
+			const result1 = await repo.delete(newMockUser.id)
+
+			// Test 2
+			const result2 = await repo.get()
+
+			// Clean Up
+			await MockUser.destroy(newMockUser.id)
+
+			// Assertions
+			expect(result1).to.be.true
+			expect(result2).to.be.empty
+		})
+
+		it('should return false when not successfully deleted', async () => {
+			// Test
+			const result = await repo.delete(9999)
+
+			// Assertions
+			expect(result).to.be.false
 		})
 	})
 })

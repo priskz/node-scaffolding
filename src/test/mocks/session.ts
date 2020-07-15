@@ -2,41 +2,35 @@ import moment from 'moment'
 import { Cookie } from 'tough-cookie'
 import cookieSignature from 'cookie-signature'
 import { Session, User } from '~/app/domain'
+import { SessionService } from '~/app/service'
 import { config } from '~/config'
 
-async function create(options: CreateOptions = {}): Promise<Session> {
+async function create(
+	options: CreateOptions = {}
+): Promise<Session | undefined> {
 	// Set default prop values and then update with given overrides
 	const option: CreateOptions = {
 		agent: 'Test Agent',
 		ipAddress: 'Test IP',
-		expires: moment()
+		expiresAt: moment()
 			.add(config.session.duration.guest, 'days')
 			.toDate(),
 		...options
 	}
 
-	// Init mock as an extended interface with props exposed as iterable
-	const mockSession = new Session() as TestSession
+	// Init
+	const service = new SessionService()
 
-	// Set props
-	for (const key in option) {
-		mockSession[key] = option[key]
-	}
-
-	// Save
-	return await mockSession.save()
+	// Create
+	return await service.create(option)
 }
 
-async function destroy(mockSession: Session | string): Promise<void> {
-	if (mockSession && typeof mockSession !== 'string') {
-		await mockSession.remove()
-	} else {
-		const session = new Session()
+async function destroy(id: string): Promise<void> {
+	// Init
+	const service = new SessionService()
 
-		session.id = mockSession
-
-		await session.remove()
-	}
+	// Delete
+	return await service.delete(id)
 }
 
 function getCookie(sessionId: string): string {
@@ -55,7 +49,7 @@ interface CreateOptions {
 	id?: string
 	agent?: string
 	ipAddress?: string
-	expires?: Date
+	expiresAt?: Date
 	lastActive?: Date
 	userId?: number
 	user?: User

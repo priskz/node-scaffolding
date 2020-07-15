@@ -1,16 +1,15 @@
 /* istanbul ignore file */
 import {
-	BaseEntity,
 	Column,
 	DeleteDateColumn,
 	Entity,
 	OneToMany,
 	PrimaryGeneratedColumn
 } from 'typeorm'
-import { Session } from '../session/Session'
+import { Session } from '../session'
 
 @Entity('user')
-export class User extends BaseEntity {
+export class User {
 	@PrimaryGeneratedColumn()
 	id!: number
 

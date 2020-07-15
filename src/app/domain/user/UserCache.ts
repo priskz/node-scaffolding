@@ -1,5 +1,6 @@
+import { getCustomRepository } from 'typeorm'
 import { DefaultCache } from '~/lib/util'
-import { User } from './User'
+import { User, UserRepository } from './'
 
 export class UserCache extends DefaultCache {
 	/**
@@ -80,10 +81,13 @@ export class UserCache extends DefaultCache {
 
 	/**
 	 * Get fresh model data from source
+	 * TODO: Refactor this to service logic
 	 */
 	public async getSource(id: number): Promise<User | undefined> {
+		const repository = getCustomRepository(UserRepository)
+
 		// Find user source data
-		return await User.findOne(id, {
+		return await repository.findOneById(id, {
 			where: { id: id },
 			relations: [],
 			loadEagerRelations: true
