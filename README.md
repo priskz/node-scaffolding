@@ -183,3 +183,7 @@ npm run migration:revert
   - The migration's "down" function is called and database modifications occur
   - The previously existing migration record is removed
   - Success!
+
+## Elastic Search
+
+- Kibana URL: http://localhost:5601/

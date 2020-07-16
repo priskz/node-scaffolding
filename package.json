@@ -26,12 +26,14 @@
 	},
 	"dependencies": {
 		"@babel/runtime": "^7.10.2",
+		"@elastic/elasticsearch": "^7.8.0",
 		"axios": "^0.19.2",
 		"bcrypt": "^4.0.1",
 		"body-parser": "^1.19.0",
 		"compression": "^1.7.4",
 		"cookie-parser": "^1.4.5",
 		"crypto-js": "^4.0.0",
+		"deep-diff": "^1.0.2",
 		"dotenv": "^8.2.0",
 		"es6-promisify": "^6.1.1",
 		"express": "^4.17.1",
@@ -43,6 +45,7 @@
 		"reflect-metadata": "^0.1.13",
 		"swagger-ui-express": "^4.1.4",
 		"typeorm": "^0.2.25",
+		"uuid": "^8.2.0",
 		"winston": "^3.2.1"
 	},
 	"devDependencies": {
@@ -65,6 +68,7 @@
 		"@types/cookie-parser": "^1.4.2",
 		"@types/cookie-signature": "^1.0.3",
 		"@types/crypto-js": "^3.1.47",
+		"@types/deep-diff": "^1.0.0",
 		"@types/dotenv": "^8.2.0",
 		"@types/es6-promisify": "^6.0.0",
 		"@types/express": "^4.17.6",
@@ -73,6 +77,7 @@
 		"@types/redis": "^2.8.22",
 		"@types/swagger-ui-express": "^4.1.2",
 		"@types/tough-cookie": "^2.3.7",
+		"@types/uuid": "^8.0.0",
 		"@typescript-eslint/eslint-plugin": "^2.34.0",
 		"@typescript-eslint/parser": "^2.34.0",
 		"babel-eslint": "^10.1.0",

@@ -1,4 +1,0 @@
-"@babel/register": "^7.8.3" - Needed?
-"@types/tough-cookie": "^2.3.6", - Dont need?
-"cookie-signature": "^1.1.0", - Dont need?
-"tough-cookie": "^3.0.1", - Dont need?
