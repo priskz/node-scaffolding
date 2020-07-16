@@ -4,6 +4,7 @@ import { cache, CacheConfig } from './cache'
 import { db, DbConfig } from './database'
 import { docs, DocsConfig } from './docs'
 import { log, LogConfig } from './log'
+import { search, SearchConfig } from './search'
 import { session, SessionConfig } from './session'
 
 export const config: ConfigDictionary = {
@@ -13,6 +14,7 @@ export const config: ConfigDictionary = {
 	db,
 	docs,
 	log,
+	search,
 	session
 }
 
@@ -23,5 +25,6 @@ interface ConfigDictionary {
 	db: DbConfig
 	docs: DocsConfig
 	log: LogConfig
+	search: SearchConfig
 	session: SessionConfig
 }
