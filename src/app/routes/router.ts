@@ -4,6 +4,7 @@ import { config } from '~/config'
 import { auth } from './auth'
 import { aux } from './aux'
 import { session } from './session'
+import { search } from './search'
 
 // Init Router
 export const router = Router()
@@ -12,6 +13,7 @@ export const router = Router()
 router.use('/', aux)
 router.use('/auth', auth)
 router.use('/session', session)
+router.use('/search', search)
 
 // Inline Routes
 router.use('/docs', swaggerUi.serve, swaggerUi.setup(config.docs))
