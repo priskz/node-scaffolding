@@ -164,7 +164,7 @@ export class TypeORMRepository<T> extends AbstractRepository<T> {
 		let take = undefined
 		let where = undefined
 		let relations: string[] = []
-		let loadEagerRelations = relations.length > 0 ? true : false
+		let loadEagerRelations = this.eager.length > 0 ? true : false
 
 		// Add configured eager relations
 		for (let i = 0; i < this.eager.length; i++) {
@@ -283,7 +283,7 @@ export class TypeORMRepository<T> extends AbstractRepository<T> {
 			}
 		}
 
-		// Given eager value should be final say.
+		// Given eager value should be final say
 		if (config.loadEagerRelations) {
 			loadEagerRelations = config.loadEagerRelations
 		}

@@ -57,7 +57,7 @@ export class Session {
 	//----- Relationships -----//
 
 	@ManyToOne(
-		() => User,
+		type => User,
 		user => user.session,
 		{ onDelete: 'CASCADE' }
 	)

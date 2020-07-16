@@ -1,4 +1,4 @@
-export const api = {
+export const api: ApiConfig = {
 	version: 'v1',
 	prefix: '/api/'
 }

@@ -13,11 +13,9 @@ export async function exception(
 	// Log error
 	log.error(`Exception: ${error.message}`)
 
-	// Respond with exception if in debug mode
-	if (env('DEBUG_MODE')) {
-		respond(req, res).exception(error.message)
-	}
+	// Return a message?
+	const message = env('DEBUG_MODE') ? error.message : undefined
 
-	// Public Response
-	respond(req, res).exception()
+	// Respond
+	respond(req, res).exception(message)
 }

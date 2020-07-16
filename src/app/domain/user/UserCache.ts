@@ -1,19 +1,27 @@
 import { getCustomRepository } from 'typeorm'
-import { DefaultCache } from '~/lib/util'
+import { cache as GlobalCache, DefaultCache } from '~/lib/util'
 import { User, UserRepository } from './'
 
 export class UserCache extends DefaultCache {
-	/**
+	/*
 	 * Cache storage key prefix
 	 */
 	protected prefix = 'user'
 
-	/**
+	/*
 	 * The _client storage bucket this should act upon
 	 */
 	protected bucket = 1
 
-	/**
+	/*
+	 * Constructor
+	 */
+	constructor() {
+		// Always use global cache client
+		super({ client: GlobalCache.client() })
+	}
+
+	/*
 	 * Fetch model from cache. Optionally, cache a fresh copy if it doesn't exist
 	 */
 	public async fetch(id: number, cache = true): Promise<User | undefined> {
@@ -41,7 +49,7 @@ export class UserCache extends DefaultCache {
 		}
 	}
 
-	/**
+	/*
 	 * Save model in cache by given id
 	 */
 	public async saveById(id: number): Promise<boolean> {
@@ -57,7 +65,7 @@ export class UserCache extends DefaultCache {
 		return await this.set(user.id, JSON.stringify(user))
 	}
 
-	/**
+	/*
 	 * Save given model in cache
 	 */
 	public async save(data: User, refresh = false): Promise<boolean> {
@@ -79,17 +87,17 @@ export class UserCache extends DefaultCache {
 		return await this.set(user.id, JSON.stringify(user))
 	}
 
-	/**
+	/*
 	 * Get fresh model data from source
-	 * TODO: Refactor this to service logic
 	 */
 	public async getSource(id: number): Promise<User | undefined> {
+		// Init repo
 		const repository = getCustomRepository(UserRepository)
 
 		// Find user source data
 		return await repository.findOneById(id, {
 			where: { id: id },
-			relations: [],
+			relations: ['session'],
 			loadEagerRelations: true
 		})
 	}

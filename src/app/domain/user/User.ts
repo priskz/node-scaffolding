@@ -53,7 +53,7 @@ export class User {
 	//----- Relationships -----//
 
 	@OneToMany(
-		() => Session,
+		type => Session,
 		session => session.user
 	)
 	session!: Session[]

@@ -20,7 +20,6 @@ describe('src/app/domain/user/UserCache', () => {
 	after(async () => {
 		// Clean up
 		await userCache.flush()
-		await userCache.client().disconnect()
 		await MockUser.destroy(mockUser.id)
 	})
 

@@ -3,7 +3,7 @@ import { Client } from './'
 
 //----- Tests -----//
 
-describe('src/lib/util/cache/Client', () => {
+describe('lib/util/cache/Client', () => {
 	// Retrieve env config vars
 	const {
 		REDIS_CACHE_HOST,
