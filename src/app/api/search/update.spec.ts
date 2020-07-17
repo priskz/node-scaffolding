@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { AxiosResponse } from 'axios'
 import { appRequest } from '~/test/util'
-import { seeds } from '~/test/seeds/search/content'
+import { MockContent } from '~/test/mocks'
 import { ContentCache, ContentSchema } from '~/app/domain'
 import { SearchClient } from '~/lib/util'
 import { config } from '~/config'
@@ -22,15 +22,18 @@ let contentCache: ContentCache
 
 // Test Source
 const testSource = {
-	id: '2D3DFekojnTvUZO35dgc9L',
-	title: '25 Best CBD Gummies on the Market',
-	slug: '25-best-cbd-gummies-on-the-market'
+	id: '278f39a6964f48d780de283c91663d3c',
+	title: 'Twitter says about 130 accounts were targeted in breach',
+	slug: 'twitter-says-130-accounts-targeted-in-breach'
 }
 
 //----- Tests -----//
 
 describe('app/api/search/update', () => {
 	before(async () => {
+		// Add seed data
+		await MockContent.addSeeds()
+
 		// Init cache
 		contentCache = new ContentCache()
 
@@ -42,6 +45,9 @@ describe('app/api/search/update', () => {
 
 		// Create test index
 		await SearchClient.createIndex(index, ContentSchema)
+
+		// Get seed data
+		const seeds = MockContent.getSeeds()
 
 		// Add seed data
 		for (let i = 0; i < seeds.length; i++) {
@@ -62,6 +68,9 @@ describe('app/api/search/update', () => {
 		// Clean up
 		await client.deleteIndex()
 		await contentCache.flush()
+
+		// Delete seed data
+		await MockContent.removeSeeds()
 	})
 
 	describe('valid input provided', () => {
@@ -77,14 +86,14 @@ describe('app/api/search/update', () => {
 	})
 
 	describe('valid input for unchanged source provided', () => {
-		it('should return 500', async () => {
+		it('should return 400', async () => {
 			// Test
 			const result: AxiosResponse = await appRequest.put(
 				`/search/content/${testSource.id}`
 			)
 
 			// Assertions
-			expect(result.status).to.equal(500)
+			expect(result.status).to.equal(400)
 		})
 	})
 

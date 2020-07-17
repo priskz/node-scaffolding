@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { seeds } from '~/test/seeds/search/content'
+import { seeds } from '~/test/seeds/content'
 import { Client as ElasticSearchClient } from '@elastic/elasticsearch'
 import { DefaultSearch, SearchClient } from './'
 import { Content } from '~/app/domain/content'
@@ -171,13 +171,13 @@ describe('lib/util/search/DefaultSearch', () => {
 			// Assertions
 			expect(result)
 				.to.have.property('count')
-				.equal(1)
+				.equal(3)
 			expect(result)
 				.to.have.property('maxScore')
 				.gt(0)
 			expect(result)
 				.to.have.property('data')
-				.with.lengthOf(1)
+				.with.lengthOf(3)
 		})
 
 		it('should return a SearchResults data populated for new slug value', async () => {
@@ -191,13 +191,13 @@ describe('lib/util/search/DefaultSearch', () => {
 			// Assertions
 			expect(result)
 				.to.have.property('count')
-				.equal(1)
+				.equal(3)
 			expect(result)
 				.to.have.property('maxScore')
 				.greaterThan(0)
 			expect(result)
 				.to.have.property('data')
-				.with.lengthOf(1)
+				.with.lengthOf(3)
 			expect(result.data[0].source)
 				.to.have.property('slug')
 				.equal(newSlug)

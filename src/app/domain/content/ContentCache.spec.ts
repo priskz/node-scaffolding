@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { MockContent } from '~/test/mocks'
 import { Content, ContentCache } from './'
 
 describe('app/domain/content/ContentCache', () => {
@@ -7,17 +8,25 @@ describe('app/domain/content/ContentCache', () => {
 
 	// Test Source
 	const testSource = {
-		id: '2D3DFekojnTvUZO35dgc9L',
-		title: '25 Best CBD Gummies on the Market',
-		slug: '25-best-cbd-gummies-on-the-market'
+		id: '278f39a6964f48d780de283c91663d3c',
+		title: 'Twitter says about 130 accounts were targeted in breach',
+		slug: 'twitter-says-130-accounts-targeted-in-breach'
 	}
 
 	// Test Content from source
 	let testContent: Content
 
+	before(async () => {
+		// Add seed data
+		await MockContent.addSeeds()
+	})
+
 	after(async () => {
 		// Clean up
 		await contentCache.flush()
+
+		// Delete seed data
+		await MockContent.removeSeeds()
 	})
 
 	describe('constructor method', () => {
