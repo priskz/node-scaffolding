@@ -1,3 +1,6 @@
+/*
+ * Primary Mock User
+ */
 const primaryMockUserData: PrimaryMockUserData = {
 	email: 'zachary.prisk@gmail.com',
 	firstName: 'Zachary',
@@ -7,8 +10,8 @@ const primaryMockUserData: PrimaryMockUserData = {
 	password: 'test123456'
 }
 
-/**
- *  Get seeds
+/*
+ *  All Seeds
  */
 const seeds: UserSeedData[] = [
 	{
@@ -20,14 +23,14 @@ const seeds: UserSeedData[] = [
 	}
 ]
 
-/**
+/*
  *  Get seeds
  */
 function getSeeds(): UserSeedData[] {
 	return seeds
 }
 
-/**
+/*
  *  Get all priamry mock user data
  */
 function getPrimaryMockUserData(): PrimaryMockUserData {
