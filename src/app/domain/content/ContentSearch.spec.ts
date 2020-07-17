@@ -1,10 +1,10 @@
 import { expect } from 'chai'
-import { seeds } from '~/test/seeds/search/content'
+import { seeds } from '~/test/seeds/content'
 import { SearchClient } from '~/lib/util'
 import { Content, ContentSearch } from './'
 import { ContentSchema } from './types/ContentSchema'
 
-describe('app/domain/search/content/COntentSearch', () => {
+describe('app/domain/search/content/ContentSearch', () => {
 	// Test Subject
 	let contentSearch: ContentSearch
 
@@ -49,20 +49,20 @@ describe('app/domain/search/content/COntentSearch', () => {
 		it('should update instance and return true', async () => {
 			// Updated data
 			const data = {
-				name: 'UpdatedHealthCategoryName',
-				slug: 'updated-health-category-slug'
+				name: 'UpdatedGeographyCategoryName',
+				slug: 'updated-geography-category-slug'
 			}
 
 			const result1 = await contentSearch.find({
 				query: {
-					match: { 'category.slug': 'health' }
+					match: { 'category.slug': 'geography' }
 				}
 			})
 
 			// Test Data
 			const content = {
 				category: {
-					id: '1TljbtPL83DpobaGeEmgsc',
+					id: 'ea3ec826372c4a6f8ec66ad085f1c419',
 					name: data.name,
 					slug: data.slug
 				}
@@ -78,7 +78,7 @@ describe('app/domain/search/content/COntentSearch', () => {
 
 			const result3 = await contentSearch.find({
 				query: {
-					match: { 'category.slug': 'health' }
+					match: { 'category.slug': 'geography' }
 				}
 			})
 
@@ -108,9 +108,9 @@ describe('app/domain/search/content/COntentSearch', () => {
 			// Test Data
 			const content = {
 				category: {
-					id: '1TljbtPL83DpobaGeEmgsc',
-					name: 'Health',
-					slug: 'heath'
+					id: 'ea3ec826372c4a6f8ec66ad085f1c419',
+					name: 'Geography',
+					slug: 'geography'
 				}
 			} as Content
 

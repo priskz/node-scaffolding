@@ -1,10 +1,11 @@
 import { expect } from 'chai'
-import { appRequest } from '~/test/util'
-import { seeds } from '~/test/seeds/search/content'
-import { ContentCache, ContentSchema } from '~/app/domain'
-import { SearchClient } from '~/lib/util'
 import { AxiosResponse } from 'axios'
+import { appRequest } from '~/test/util'
+import { MockContent } from '~/test/mocks'
+import { seeds } from '~/test/seeds/content'
 import { config } from '~/config'
+import { SearchClient } from '~/lib/util'
+import { ContentCache, ContentSchema } from '~/app/domain'
 import { defaultFindQuery } from './get'
 
 //----- Data -----//
@@ -22,17 +23,20 @@ const defaultSearchIndex = config.search.index.default
 let contentCache: ContentCache
 
 // Test Params
-const testText = 'cbd'
-const testFilterTagSlug = 'brain-structure-function'
-const testSize = 3
-const testFrom = 4
+const testText = 'twitter'
+const testFilterTagSlug = 'exuding'
+const testSize = 2
+const testFrom = 2
 const testFields = ['id', 'title', 'slug']
-const testSort = { 'category.name': 'asc' }
+const testSort = { slug: 'asc' }
 
 //----- Tests -----//
 
 describe('app/api/search/get', () => {
 	before(async function() {
+		// Add seed data
+		await MockContent.addSeeds()
+
 		// Init cache
 		contentCache = new ContentCache()
 
@@ -61,6 +65,9 @@ describe('app/api/search/get', () => {
 		// Clean up
 		await client.deleteIndex()
 		await contentCache.flush()
+
+		// Delete seed data
+		await MockContent.removeSeeds()
 	})
 
 	describe('when invalid type is given', () => {
@@ -238,9 +245,9 @@ describe('app/api/search/get', () => {
 
 			// Assertions
 			expect(result.status).to.equal(200)
-			expect(result.data.count).to.equal(9)
-			expect(result.data.maxScore).to.equal(5.6420274)
-			expect(result.data.data.length).to.equal(9)
+			expect(result.data.count).to.equal(5)
+			expect(result.data.maxScore).to.equal(5.931046)
+			expect(result.data.data.length).to.equal(5)
 		})
 
 		it('sort param should return 200 with results in body ordered by param specified', async () => {
@@ -376,9 +383,9 @@ describe('app/api/search/get', () => {
 
 			// Assertions
 			expect(result.status).to.equal(200)
-			expect(result.data.count).to.equal(2)
-			expect(result.data.maxScore).to.equal(2.2894392)
-			expect(result.data.data.length).to.equal(2)
+			expect(result.data.count).to.equal(3)
+			expect(result.data.maxScore).to.equal(5.931046)
+			expect(result.data.data.length).to.equal(3)
 		})
 
 		it('as raw should return 200 with results in body', async () => {
@@ -533,9 +540,9 @@ describe('app/api/search/get', () => {
 
 			// Assertions
 			expect(result.status).to.equal(200)
-			expect(result.data.count).to.equal(2)
-			expect(result.data.maxScore).to.equal(2.2894392)
-			expect(result.data.data.length).to.equal(2)
+			expect(result.data.count).to.equal(3)
+			expect(result.data.maxScore).to.equal(5.931046)
+			expect(result.data.data.length).to.equal(3)
 		})
 	})
 

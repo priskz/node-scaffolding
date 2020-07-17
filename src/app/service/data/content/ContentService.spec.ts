@@ -1,23 +1,23 @@
 import { expect } from 'chai'
-import { MockSession } from '~/test/mocks'
-import { Session } from '~/app/domain'
+import { MockContent } from '~/test/mocks'
+import { Content } from '~/app/domain'
 import { ContentService } from './'
 
+//----- Data -----//
+
+let service: ContentService
+
+//----- Tests -----//
+
 describe('app/service/data/content/ContentService', () => {
-	// Unit
-	let service: ContentService
-
-	// Mock Session
-	let mockSession: Session
-
 	before(async () => {
-		// Clean up
-		mockSession = (await MockSession.create()) as Session
+		// Add seed data
+		await MockContent.addSeeds()
 	})
 
 	after(async () => {
-		// Clean up
-		await MockSession.destroy(mockSession.id)
+		// Delete seed data
+		await MockContent.removeSeeds()
 	})
 
 	describe('constructor method', () => {
@@ -31,14 +31,16 @@ describe('app/service/data/content/ContentService', () => {
 	})
 
 	describe('getOneById method', () => {
-		it('if found should return Session', async () => {
+		it('if found should return Content', async () => {
+			const seed = MockContent.getSeeds()[0]
+
 			// Test
-			const result = await service.getOneById(mockSession.id)
+			const result = await service.getOneById(seed.id as string)
 
 			// Assertions
 			expect(result)
 				.to.have.property('id')
-				.to.equal(mockSession.id)
+				.to.equal(seed.id as string)
 		})
 
 		it('if NOT found should return undefined', async () => {

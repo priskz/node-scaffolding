@@ -1,11 +1,6 @@
 import { getCustomRepository } from 'typeorm'
 import { DataService } from '~/lib/service/DataService'
-import {
-	Content,
-	ContentRepository,
-	ContentSearch,
-	ContentSource
-} from '~/app/domain'
+import { Content, ContentRepository, ContentSearch } from '~/app/domain'
 import { config } from '~/config'
 
 export class ContentService extends DataService<Content> {
