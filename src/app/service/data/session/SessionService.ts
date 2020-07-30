@@ -1,6 +1,6 @@
 import { getCustomRepository } from 'typeorm'
-import moment from 'moment'
 import { DataService } from '~/lib/service/DataService'
+import { time } from '~/lib/util'
 import { Session, SessionRepository } from '~/app/domain'
 
 export class SessionService extends DataService<Session> {
@@ -24,7 +24,7 @@ export class SessionService extends DataService<Session> {
 	public async expire(id: string): Promise<boolean> {
 		return !!(await this.repository.update({
 			id,
-			expiresAt: moment().toDate()
+			expiresAt: time.now().toJSDate()
 		}))
 	}
 }

@@ -30,6 +30,27 @@ describe('app/service/root/session/SessionRoot', () => {
 		})
 	})
 
+	describe('generate method', () => {
+		it('should return new Session', async () => {
+			// Test
+			const result = (await service.generate(
+				'test-user-agent',
+				'127.0.0.0.1'
+			)) as Session
+
+			// Clean up
+			await MockSession.destroy(result.id)
+
+			// Assertions
+			expect(result)
+				.to.have.property('agent')
+				.to.equal('test-user-agent')
+			expect(result)
+				.to.have.property('ipAddress')
+				.to.equal('127.0.0.0.1')
+		})
+	})
+
 	describe('getOneById method', () => {
 		it('if found should return Session', async () => {
 			// Test

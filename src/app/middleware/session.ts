@@ -1,11 +1,10 @@
-import moment from 'moment'
 import { Request, Response, NextFunction } from 'express'
 import { config } from '~/config'
-import { respond } from '~/lib/util'
+import { respond, time } from '~/lib/util'
 import { SessionRoot } from '~/app/service'
 import { Session as SessionModel } from '~/app/domain'
 
-/**
+/*
  * Attempt to extract incoming ip address
  */
 export function getIpAddress(req: Request): string | undefined {
@@ -22,20 +21,30 @@ export function getIpAddress(req: Request): string | undefined {
 	if (direct) return direct
 }
 
-/**
+/*
  * Attempt to extract user agent information
  */
 export function getAgent(req: Request): string {
 	return req.headers['user-agent'] || 'No Agent Found'
 }
 
-/**
+/*
  * Check if session is expired
  */
 export function isExpired(model: SessionModel): boolean {
-	return model && moment() > moment(model.expiresAt)
+	// Parse time object
+	const expiresAt = time.parse(model.expiresAt)
+
+	// Expiration defined?
+	if (!expiresAt) return false
+
+	// Compare time and return bool
+	return model && time.now() > expiresAt
 }
 
+/*
+ * Session Middleware
+ */
 export async function session(
 	req: Request,
 	res: Response,

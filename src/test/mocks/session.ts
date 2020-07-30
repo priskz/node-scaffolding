@@ -1,9 +1,9 @@
-import moment from 'moment'
 import { Cookie } from 'tough-cookie'
 import cookieSignature from 'cookie-signature'
 import { Session, User } from '~/app/domain'
 import { SessionService } from '~/app/service'
 import { config } from '~/config'
+import { time } from '~/lib/util'
 
 async function create(
 	options: CreateOptions = {}
@@ -12,9 +12,10 @@ async function create(
 	const option: CreateOptions = {
 		agent: 'Test Agent',
 		ipAddress: 'Test IP',
-		expiresAt: moment()
-			.add(config.session.duration.guest, 'days')
-			.toDate(),
+		expiresAt: time
+			.now()
+			.plus({ days: config.session.duration.guest })
+			.toJSDate(),
 		...options
 	}
 
