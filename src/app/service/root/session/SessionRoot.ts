@@ -1,7 +1,7 @@
-import moment from 'moment'
 import { config } from '~/config'
 import { Session } from '~/app/domain'
 import { SessionService } from '~/app/service/data'
+import { time } from '~/lib/util'
 
 export class SessionRoot {
 	/*
@@ -23,15 +23,11 @@ export class SessionRoot {
 		agent: string,
 		ipAddress?: string
 	): Promise<Session | undefined> {
-		// TODO: Clean up time logic
-		// Current time
-		const now = new Date()
-
-		// Create expiresAt
-		const expiresAt = new Date(now)
-
-		// Add session duration to value
-		expiresAt.setDate(now.getDate() + config.session.duration.guest)
+		// Determine expiration
+		const expiresAt = time
+			.now()
+			.plus({ days: config.session.duration.guest })
+			.toJSDate()
 
 		// Create
 		return await this.session.create({
@@ -52,6 +48,6 @@ export class SessionRoot {
 	 * Updates Session's activateAt with current time stamp
 	 */
 	public async touch(id: string): Promise<void> {
-		await this.session.update({ id, activeAt: moment().toDate() })
+		await this.session.update({ id, activeAt: time.now().toJSDate() })
 	}
 }
