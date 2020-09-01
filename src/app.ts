@@ -6,7 +6,7 @@ import express, { Express } from 'express'
 import { config } from '~/config'
 import { global, exception } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, env, log } from '~/lib/util'
+import { cache, database, env, log, schedule } from '~/lib/util'
 
 /*
  * Instantiate App Framework
@@ -19,6 +19,15 @@ const instance: Express = express()
 async function run(): Promise<Express> {
 	// Init app log
 	log.init(config.log)
+
+	// Schedule Enabled?
+	if (config.schedule.enable) {
+		// Init schedule
+		schedule.config(config.schedule.jobs)
+
+		// Start schedule
+		await schedule.start()
+	}
 
 	// Connect database
 	await database.connect(config.db)
@@ -54,6 +63,7 @@ async function run(): Promise<Express> {
 async function shutdown() {
 	await database.disconnect()
 	await cache.disconnect()
+	await schedule.stop()
 }
 
 // Export App
