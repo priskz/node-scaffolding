@@ -1,7 +1,7 @@
 /* istanbul ignore file */
 import './env'
 import { Server, createServer } from 'http'
-import { env } from '~/lib/util'
+import { env, log } from '~/lib/util'
 import { app } from '~/app'
 
 // Init
@@ -16,7 +16,7 @@ async function start() {
 
 	// Listen on configured port
 	httpServer.listen(env('APP_PORT'), () =>
-		console.log(`---> Server listening on port ${env('APP_PORT')} <---`)
+		log.info(`---> Server listening on port ${env('APP_PORT')} <---`)
 	)
 }
 
