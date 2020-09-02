@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import fs from 'fs'
-import { Logger, LogConfig } from './'
+import { Logger, LoggerConfig } from './'
 
 //----- Tests -----//
 
@@ -12,22 +12,20 @@ describe('util/Logger', () => {
 	const testFile = './log/app.util-logger-test.log'
 
 	// Test File Log Config
-	const testFileConfig: LogConfig = {
-		file: {
-			enable: true,
-			transports: [
-				{
-					type: 'file',
-					options: {
-						level: 'debug',
-						filename: testFile,
-						handleExceptions: true,
-						maxsize: 5242880, // 5MB
-						maxFiles: 5
-					}
+	const testFileConfig: LoggerConfig = {
+		enable: true,
+		transports: [
+			{
+				type: 'file',
+				options: {
+					level: 'debug',
+					filename: testFile,
+					handleExceptions: true,
+					maxsize: 5242880, // 5MB
+					maxFiles: 5
 				}
-			]
-		}
+			}
+		]
 	}
 
 	after(async () => {
@@ -50,22 +48,20 @@ describe('util/Logger', () => {
 		const disabledLogTestFile = './log/app.disabled-log-test.log'
 
 		// Test File Log Config
-		const disabledFileConfig: LogConfig = {
-			file: {
-				enable: false,
-				transports: [
-					{
-						type: 'file',
-						options: {
-							level: 'debug',
-							filename: disabledLogTestFile,
-							handleExceptions: true,
-							maxsize: 5242880, // 5MB
-							maxFiles: 5
-						}
+		const disabledFileConfig: LoggerConfig = {
+			enable: false,
+			transports: [
+				{
+					type: 'file',
+					options: {
+						level: 'debug',
+						filename: disabledLogTestFile,
+						handleExceptions: true,
+						maxsize: 5242880, // 5MB
+						maxFiles: 5
 					}
-				]
-			}
+				}
+			]
 		}
 
 		// Create file logger
@@ -80,7 +76,9 @@ describe('util/Logger', () => {
 		testLogger.error(msg.error)
 
 		it('should NOT log a message to file', async () => {
-			expect(fs.existsSync(disabledLogTestFile)).to.be.false
+			expect(fs.readFileSync(disabledLogTestFile, 'utf8')).to.not.include(
+				msg.error
+			)
 		})
 
 		after(async () => {
