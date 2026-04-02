@@ -16,6 +16,8 @@ export default defineConfig({
 			APP_PORT: '3001',
 			COOKIE_SECRET: 'test-cookie-secret',
 			DATABASE_URL: 'postgresql://localhost:5432/test',
+			LOG_LEVEL: 'error',
+			LOG_CONSOLE_PRETTY: 'false',
 		},
 		coverage: {
 			provider: 'v8',

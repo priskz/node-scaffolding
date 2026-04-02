@@ -1,46 +1,21 @@
-import { env } from '~/lib/util'
-import { LogConfig as BaseLogConfig, LoggerConfig } from '~/lib/util'
+/*
+ * Log Configuration
+ *
+ * Logging is now configured entirely via environment variables:
+ *   LOG_LEVEL        — trace | debug | info | warn | error | fatal
+ *   LOG_DESTINATIONS — comma-separated: console, file
+ *   LOG_CONSOLE_PRETTY — true for pino-pretty in dev
+ *   LOG_FILE_PATH    — file destination path (optional)
+ *
+ * This file exists for backward compatibility with the config barrel.
+ * No runtime config object is needed — LogService reads env directly.
+ */
 
-export const log: LogConfig = {
-	app: {
-		enable: true,
-		default: true,
-		transports: [
-			{
-				type: 'file',
-				options: {
-					level: 'info',
-					filename: `./log/app.${env.NODE_ENV}.log`,
-					handleExceptions: true,
-					maxsize: 5242880, // 5MB
-					maxFiles: 5
-				}
-			},
-			{
-				type: 'console',
-				disable: true,
-				options: {
-					level: 'debug',
-					handleExceptions: true
-				}
-			}
-		]
-	},
-	cli: {
-		enable: true,
-		transports: [
-			{
-				type: 'console',
-				options: {
-					level: 'debug',
-					handleExceptions: true
-				}
-			}
-		]
-	}
+export interface LogConfig
+{
+	engine: string
 }
 
-export interface LogConfig extends BaseLogConfig {
-	app: LoggerConfig
-	cli: LoggerConfig
+export const log: LogConfig = {
+	engine: 'pino',
 }

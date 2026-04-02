@@ -1,74 +1,80 @@
-import { Logger, LogConfig } from './'
+import type { Logger as PinoLogger } from 'pino'
+import { logService } from './log-service'
 
 /*
- * Global Logger Instance
+ * Global Log Facade
+ *
+ * Convenience wrapper over the Pino root logger.
+ * Provides a simple API for application-level logging.
+ *
+ * For module-specific logging, use logService.createLogger('ModuleName')
+ * which returns a child logger tagged with the module name.
+ *
+ * Structured logging convention:
+ *   log.info({ leagueId, userId }, 'auction started')
+ *   NOT: log.info('auction started for league ' + leagueId)
  */
-let instance: { [key: string]: Logger }
 
 /*
- * Global Logger Instance
+ * Initialize logging
+ *
+ * Called once during app bootstrap. Must be called before
+ * any log methods are used.
  */
-let defaultAlias: string = 'default'
-
-/*
- * Initialize logger
- */
-function init(config?: LogConfig): void {
-	// Config goven?
-	if (!config) {
-		// Init default logger
-		instance[defaultAlias] = new Logger()
-
-		// Return
-		return
-	}
-
-	// Init
-	instance = {}
-
-	// Grab keys
-	const key = Object.keys(config)
-
-	// Set first element to default
-	defaultAlias = config[key[0]].name ? (config[key[0]].name as string) : key[0]
-
-	// Iterate and instanciate logs
-	for (let i = 0; i < key.length; i++) {
-		// Check if specified as default
-		if (config[key[i]].default) {
-			defaultAlias = config[key[i]].name
-				? (config[key[i]].name as string)
-				: key[i]
-		}
-
-		// Init logger instance with configuration
-		instance[key[i]] = new Logger({
-			name: key[i],
-			...config[key[i]]
-		})
-	}
+function init(): PinoLogger
+{
+	return logService.init()
 }
 
 /*
- * Retrieve Logger
+ * Get the root logger instance
  */
-export const logger = (logName?: string) => {
-	// Return specified logger or default
-	return instance[logName ? logName : defaultAlias]
+function logger(): PinoLogger
+{
+	return logService.root()
 }
 
 /*
- * Export Util
+ * Export log facade
+ *
+ * Each method delegates to the root Pino logger.
+ * Supports both (msg) and (obj, msg) calling conventions.
  */
 export const log = {
 	init,
 	logger,
-	emergency: (msg: string, data?: any) => logger().emergency(msg, data),
-	alert: (msg: string, data?: any) => logger().alert(msg, data),
-	critical: (msg: string, data?: any) => logger().critical(msg, data),
-	error: (msg: string, data?: any) => logger().error(msg, data),
-	warn: (msg: string, data?: any) => logger().warn(msg, data),
-	notice: (msg: string, data?: any) => logger().notice(msg, data),
-	info: (msg: string, data?: any) => logger().info(msg, data),
-	debug: (msg: string, data?: any) => logger().debug(msg, data)
+
+	// Log levels — structured: log.info({ key: value }, 'message')
+	trace: (objOrMsg: object | string, msg?: string) => _log('trace', objOrMsg, msg),
+	debug: (objOrMsg: object | string, msg?: string) => _log('debug', objOrMsg, msg),
+	info: (objOrMsg: object | string, msg?: string) => _log('info', objOrMsg, msg),
+	warn: (objOrMsg: object | string, msg?: string) => _log('warn', objOrMsg, msg),
+	error: (objOrMsg: object | string, msg?: string) => _log('error', objOrMsg, msg),
+	fatal: (objOrMsg: object | string, msg?: string) => _log('fatal', objOrMsg, msg),
+
+	// Child logger factory
+	child: (module: string) => logService.createLogger(module),
+}
+
+/*
+ * Internal dispatch
+ *
+ * Handles both calling conventions:
+ *   log.info('simple message')
+ *   log.info({ data }, 'structured message')
+ */
+function _log(level: string, objOrMsg: object | string, msg?: string): void
+{
+	const root = logService.root()
+
+	if(typeof objOrMsg === 'string')
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(root as any)[level](objOrMsg)
+	}
+	else
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(root as any)[level](objOrMsg, msg)
+	}
 }

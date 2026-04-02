@@ -184,7 +184,7 @@ export async function get(req: Request, res: Response): Promise<void> {
 	} catch (e: unknown) {
 		// Log error
 		const message = e instanceof Error ? e.message : String(e)
-		log.error(message)
+		log.error({ error: message }, 'Search query failed')
 
 		// Error
 		respond(req, res).exception(message)

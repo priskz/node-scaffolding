@@ -13,6 +13,18 @@ All notable changes to this project will be documented in this file.
 - tsx for development (watch mode) and tsc + tsc-alias for production builds
 - prisma:generate, prisma:migrate, prisma:studio npm scripts
 
+### Added (Tier 3A — Infrastructure Services)
+- Pino structured logging replacing Winston — singleton root logger, child loggers per module, env-driven log level
+- LogService with destination-based transport wiring (console + file, extensible for cloud)
+- pino-pretty for dev, raw JSON for prod
+- Request logging middleware with requestId correlation via AsyncLocalStorage
+- File storage service with driver abstraction — local disk and S3 drivers
+- S3 driver supports AWS S3, MinIO, and S3-compatible services via endpoint config
+- Storage facade with lazy driver initialization from STORAGE_DRIVER env var
+- LOG_LEVEL, LOG_DESTINATIONS, LOG_CONSOLE_PRETTY, LOG_FILE_PATH env vars
+- STORAGE_DRIVER, STORAGE_LOCAL_ROOT, STORAGE_S3_* env vars
+- 13 new tests (LogService, request context, local driver, S3 driver)
+
 ### Added (Tier 2 — Core Features)
 - Zod environment validation — fail-fast at startup with typed env object
 - Zod request validation — replaces node-input-validator across all handlers
@@ -36,7 +48,12 @@ All notable changes to this project will be documented in this file.
 - express.json() replaces body-parser
 - Null-safety improvements across session middleware and auth handlers
 
+### Changed (Tier 3A)
+- All log call sites migrated from string concatenation to Pino structured format
+- Cache Client debug logging updated from Winston Logger to Pino child logger
+
 ### Removed
+- Winston logging library (replaced by Pino)
 - Babel (.babelrc, all @babel/* packages, babel-plugin-module-resolver)
 - TypeORM (typeorm, reflect-metadata, mysql2, decorators, migration file)
 - Mocha/Chai/NYC (.mocharc.json, all chai-* plugins, nyc config)

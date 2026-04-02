@@ -1,4 +1,5 @@
 import { Client } from './'
+import { log } from '~/lib/util/log'
 
 export class DefaultCache {
 	/*
@@ -62,11 +63,9 @@ export class DefaultCache {
 			try {
 				value = JSON.stringify(data)
 			} catch (error) {
-				if (this.client().getDebug()) {
-					// Log
-					this.client().logger.error(
-						`DefaultCache unable to JSON.stringify: ${value}:${error}`
-					)
+				if(this.client().getDebug())
+				{
+					log.error({ value, error }, 'DefaultCache unable to JSON.stringify')
 				}
 
 				return false

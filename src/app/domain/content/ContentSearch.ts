@@ -28,7 +28,7 @@ export class ContentSearch extends DefaultSearch<ContentSource> {
 		// Not found?
 		if (!search.data[0]) {
 			// Log info
-			log.info('Unable to replace indexed Content, it did not exist', { id })
+			log.info({ id }, 'Unable to replace indexed Content, it did not exist')
 
 			// Return bool
 			return false
@@ -72,21 +72,21 @@ export class ContentSearch extends DefaultSearch<ContentSource> {
 			if (updated) continue
 
 			// Log error
-			log.error(`Unable to update content search index reference`, {
-				index: this.getClient().getIndex(),
-				type: delta[r].key,
-				id: delta[r].data.id
-			})
+			log.error(
+				{ index: this.getClient().getIndex(), type: delta[r].key, id: delta[r].data.id },
+				'Unable to update content search index reference'
+			)
 		}
 
 		// Refresh index once updates are done
 		const refreshed = await this.refresh()
 
 		// Not refreshed?
-		if (!refreshed) {
+		if( ! refreshed)
+		{
 			log.warn(
-				'Unable to refresh search index upon updating content references',
-				{ index: this.getClient().getIndex() }
+				{ index: this.getClient().getIndex() },
+				'Unable to refresh search index upon updating content references'
 			)
 		}
 	}
@@ -130,31 +130,29 @@ export class ContentSearch extends DefaultSearch<ContentSource> {
 			})
 
 			// Log results for reference
-			log.info('Full ContentSearch reference update response', response)
+			log.info({ response }, 'Full ContentSearch reference update response')
 
 			// Return true if 200
 			if (response.statusCode === 200) {
 				// Log some specific info
-				log.info('Reference Updated', {
-					ref: {
-						type: ref,
-						id: data.id
-					},
+				log.info({
+					ref: { type: ref, id: data.id },
 					timedOut: `${response.body.timed_out}`,
 					executionTime: `${response.body.took}ms`,
 					found: `${response.body.total}`,
 					replaced: `${response.body.updated}`,
 					batches: `${response.body.batches}`,
-					versionConflicts: `${response.body.version_conflicts}`
-				})
+					versionConflicts: `${response.body.version_conflicts}`,
+				}, 'Reference updated')
 
 				// Success!
 				return true
 			}
 		} catch (e: unknown) {
-			log.error('ContentSearch reference global update error', {
-				msg: e instanceof Error ? e.message : String(e)
-			})
+			log.error(
+				{ error: e instanceof Error ? e.message : String(e) },
+				'ContentSearch reference global update error'
+			)
 		}
 
 		// Return false to signal an issue

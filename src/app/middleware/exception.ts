@@ -18,11 +18,11 @@ export async function exception(
 		// Log non-500 errors at warn level
 		if(error.statusCode < 500)
 		{
-			log.warn(`${error.code}: ${error.message}`)
+			log.warn({ code: error.code, statusCode: error.statusCode }, error.message)
 		}
 		else
 		{
-			log.error(`${error.code}: ${error.message}`)
+			log.error({ code: error.code, statusCode: error.statusCode }, error.message)
 		}
 
 		// Structured error response
@@ -31,7 +31,7 @@ export async function exception(
 	}
 
 	// Unstructured error — log and return generic 500
-	log.error(`Exception: ${error.message}`)
+	log.error({ error: error.message, stack: error.stack }, 'Unhandled exception')
 
 	// Return detail in debug mode only
 	const message = env.DEBUG_MODE ? error.message : undefined

@@ -1,6 +1,6 @@
 import { promisify } from 'es6-promisify'
 import { ClientOpts, RedisClient } from 'redis'
-import { Logger } from '~/lib/util'
+import { log } from '~/lib/util'
 import { env } from '~/lib/util/env'
 
 /*
@@ -46,7 +46,7 @@ export class Client {
 	/*
 	 * Internal Logger
 	 */
-	public logger: Console | Logger = console
+	private cacheLog = log.child('CacheClient')
 
 	/*
 	 * Constructor
@@ -71,34 +71,17 @@ export class Client {
 		}
 
 		// Debug Mode?
-		if (this.debug) {
-			// Logger instance
-			const logger = this.logger
-
+		if(this.debug)
+		{
 			// Add logging to client events
-			this._client.on('error', function(msg) {
-				logger.error(`Redis ${msg}`)
-			})
+			const cacheLog = this.cacheLog
 
-			this._client.on('ready', function() {
-				logger.info('Redis Ready')
-			})
-
-			this._client.on('connect', function() {
-				logger.info(`Redis Connected`)
-			})
-
-			this._client.on('reconnecting', function() {
-				logger.info('Redis Reconnecting')
-			})
-
-			this._client.on('end', function() {
-				logger.info(`Redis Ended`)
-			})
-
-			this._client.on('warning', function(msg) {
-				logger.warn(`Redis Warning: ${msg}`)
-			})
+			this._client.on('error', (msg) => cacheLog.error({ event: 'error' }, `Redis ${msg}`))
+			this._client.on('ready', () => cacheLog.info('Redis ready'))
+			this._client.on('connect', () => cacheLog.info('Redis connected'))
+			this._client.on('reconnecting', () => cacheLog.info('Redis reconnecting'))
+			this._client.on('end', () => cacheLog.info('Redis ended'))
+			this._client.on('warning', (msg) => cacheLog.warn({ event: 'warning' }, `Redis warning: ${msg}`))
 		}
 	}
 
@@ -156,7 +139,7 @@ export class Client {
 			result = await setAsync(key, value, mode, duration).catch(e => {
 				// Log
 				if (this.debug) {
-					this.logger.error(e.message)
+					this.cacheLog.error(e.message)
 				}
 
 				// Bail on fail?
@@ -172,7 +155,7 @@ export class Client {
 			result = await setAsync(key, value).catch(e => {
 				// Log
 				if (this.debug) {
-					this.logger.error(e.message)
+					this.cacheLog.error(e.message)
 				}
 
 				// Bail on fail?
@@ -198,7 +181,7 @@ export class Client {
 		const result = await getAsync(key).catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -227,7 +210,7 @@ export class Client {
 		const result = await keysAsync(pattern).catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -255,7 +238,7 @@ export class Client {
 		const result = await delAsync(key).catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -284,7 +267,7 @@ export class Client {
 		const result = await msetAsync(keyValuePairs).catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -312,7 +295,7 @@ export class Client {
 		const result = await mgetAsync(keys).catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -340,7 +323,7 @@ export class Client {
 		const result = await flushallAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -365,7 +348,7 @@ export class Client {
 		const result = await selectAsync(bucket).catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -390,7 +373,7 @@ export class Client {
 		const result = await flushdbAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -420,7 +403,7 @@ export class Client {
 		const client = await duplicateAsync(config).catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Rethrow, bigger issue here.
@@ -445,7 +428,7 @@ export class Client {
 		const result = await quitAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?
@@ -470,7 +453,7 @@ export class Client {
 		const connected = await pingAsync().catch(e => {
 			// Log
 			if (this.debug) {
-				this.logger.error(e.message)
+				this.cacheLog.error(e.message)
 			}
 
 			// Bail on fail?

@@ -30,11 +30,26 @@ const envSchema = z.object({
 	RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
 	RATE_LIMIT_MAX: z.coerce.number().default(100),
 
+	// Logging
+	LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+	LOG_DESTINATIONS: z.string().default('console'),
+	LOG_CONSOLE_PRETTY: z.string().default('true'),
+	LOG_FILE_PATH: z.string().optional(),
+
 	// Cache
 	REDIS_CACHE_DEFAULT: z.string().default('redis'),
 	REDIS_CACHE_HOST: z.string().default('localhost'),
 	REDIS_CACHE_PORT: z.coerce.number().default(6379),
 	REDIS_CACHE_DB_DEFAULT: z.coerce.number().default(0),
+
+	// Storage
+	STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+	STORAGE_LOCAL_ROOT: z.string().default('./storage'),
+	STORAGE_S3_BUCKET: z.string().optional(),
+	STORAGE_S3_REGION: z.string().optional(),
+	STORAGE_S3_ACCESS_KEY: z.string().optional(),
+	STORAGE_S3_SECRET_KEY: z.string().optional(),
+	STORAGE_S3_ENDPOINT: z.string().optional(),
 })
 
 /*

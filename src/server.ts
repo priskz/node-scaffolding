@@ -8,7 +8,7 @@ import { app } from '~/app'
 let httpServer: Server
 let shuttingDown = false
 
-async function start()
+async function start(): Promise<void>
 {
 	// Create app instance
 	await app.run()
@@ -18,11 +18,11 @@ async function start()
 
 	// Listen on configured port
 	httpServer.listen(env.APP_PORT, () =>
-		log.info(`---> Server listening on port ${env.APP_PORT} <---`)
+		log.info({ port: env.APP_PORT }, 'Server listening')
 	)
 }
 
-async function stop()
+async function stop(): Promise<void>
 {
 	// Already shutting down?
 	if(shuttingDown) return
@@ -45,7 +45,7 @@ async function stop()
 	catch(e: unknown)
 	{
 		const message = e instanceof Error ? e.message : String(e)
-		log.error(`Shutdown error: ${message}`)
+		log.error({ error: message }, 'Shutdown error')
 	}
 
 	// Exit

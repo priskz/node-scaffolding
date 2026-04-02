@@ -253,10 +253,7 @@ export class SearchClient {
 		// Check if data changed at all
 		if (response.statusCode === 200 && response.body.result === 'noop') {
 			// Log info
-			log.info('Search index not updated, document was identical', {
-				index: this.getIndex(),
-				id
-			})
+			log.info({ index: this.getIndex(), id }, 'Search index not updated, document was identical')
 		}
 
 		// Return bool

@@ -4,7 +4,7 @@ import cors from 'cors'
 import express, { Express } from 'express'
 import helmet from 'helmet'
 import { config } from '~/config'
-import { global, exception, rateLimiter } from '~/app/middleware'
+import { global, exception, rateLimiter, requestLogger } from '~/app/middleware'
 import { router } from '~/app/routes'
 import { cache, database, env, log, schedule } from '~/lib/util'
 
@@ -16,12 +16,14 @@ const instance: Express = express()
 /*
  * Run Application
  */
-async function run(): Promise<Express> {
-	// Init app log
-	log.init(config.log)
+async function run(): Promise<Express>
+{
+	// Init logging
+	log.init()
 
 	// Schedule Enabled?
-	if (config.schedule.enable) {
+	if(config.schedule.enable)
+	{
 		// Init schedule
 		schedule.config(config.schedule.jobs)
 
@@ -34,6 +36,9 @@ async function run(): Promise<Express> {
 
 	// Connect cache
 	await cache.connect(config.cache.driver)
+
+	// Request logging + requestId context
+	instance.use(requestLogger)
 
 	// Security headers
 	instance.use(helmet())
@@ -64,7 +69,7 @@ async function run(): Promise<Express> {
 	// Configure route handlers
 	instance.use(`${config.api.prefix}${config.api.version}`, router)
 
-	// Add exception handler should be last use)
+	// Add exception handler (should be last use)
 	instance.use(exception)
 
 	// Return Express
@@ -74,7 +79,8 @@ async function run(): Promise<Express> {
 /*
  * Shutdown Application
  */
-async function shutdown() {
+async function shutdown(): Promise<void>
+{
 	await database.disconnect()
 	await cache.disconnect()
 	await schedule.stop()

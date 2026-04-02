@@ -17,7 +17,7 @@ async function refreshDefaultSearchIndex(): Promise<boolean> {
 	// Configured?
 	if (!index) {
 		// Log error
-		log.error('Default search index not properly configured')
+		log.error('Default search index not configured')
 
 		return false
 	}
@@ -57,7 +57,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 		}
 	} catch (e: unknown) {
 		// Log error
-		log.error(e instanceof Error ? e.message : String(e))
+		log.error({ error: e instanceof Error ? e.message : String(e) }, 'Search index refresh failed')
 	} finally {
 		// Refreshed?
 		if (refreshed) {
