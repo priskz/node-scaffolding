@@ -62,7 +62,7 @@ export abstract class AbstractTask implements SchedulableInterface {
 	/*
 	 * Execute
 	 */
-	protected abstract async execute(): Promise<void>
+	protected abstract execute(): Promise<void>
 
 	/*
 	 * Run Task Logic
@@ -74,9 +74,9 @@ export abstract class AbstractTask implements SchedulableInterface {
 		try {
 			// Perform logic
 			await this.execute()
-		} catch (error) {
+		} catch (error: unknown) {
 			// Set error
-			this.error = error.message
+			this.error = error instanceof Error ? error.message : String(error)
 		}
 
 		// Finish task

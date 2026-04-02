@@ -57,7 +57,7 @@ export class ContentSearch extends DefaultSearch<ContentSource> {
 		id?: string
 	): Promise<void> {
 		// Check for deltas
-		const delta = this.parseReferenceDeltas(content, hit)
+		const delta = this.parseReferenceDeltas(content as unknown as ContentSource, hit)
 
 		// Iterate deltas
 		for (let r = 0; r < delta.length; r++) {
@@ -151,9 +151,9 @@ export class ContentSearch extends DefaultSearch<ContentSource> {
 				// Success!
 				return true
 			}
-		} catch (e) {
+		} catch (e: unknown) {
 			log.error('ContentSearch reference global update error', {
-				msg: e.message
+				msg: e instanceof Error ? e.message : String(e)
 			})
 		}
 
@@ -165,7 +165,7 @@ export class ContentSearch extends DefaultSearch<ContentSource> {
 	 * Extract deltas
 	 */
 	private parseReferenceDeltas(
-		content: Content,
+		content: ContentSource,
 		hit: Hit<ContentSource>
 	): ReferenceDelta[] {
 		// Init

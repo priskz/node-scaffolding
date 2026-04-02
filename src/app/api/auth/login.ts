@@ -50,7 +50,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
 	// Update response cookie
 	await res.cookie(config.session.cookie, session.id, {
-		expires: session.expiresAt,
+		expires: session.expiresAt ?? undefined,
 		sameSite: 'strict',
 		signed: true
 	})

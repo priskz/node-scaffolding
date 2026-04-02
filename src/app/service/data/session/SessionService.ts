@@ -1,4 +1,3 @@
-import { getCustomRepository } from 'typeorm'
 import { DataService } from '~/lib/service/DataService'
 import { time } from '~/lib/util'
 import { Session, SessionRepository } from '~/app/domain'
@@ -8,7 +7,7 @@ export class SessionService extends DataService<Session> {
 	 * Construct
 	 */
 	constructor() {
-		super(getCustomRepository(SessionRepository))
+		super(new SessionRepository())
 	}
 
 	/*

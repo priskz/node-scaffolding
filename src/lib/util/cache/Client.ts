@@ -265,7 +265,7 @@ export class Client {
 		})
 
 		// Return true if any removed, partial or all
-		return result > 0
+		return typeof result === 'number' && result > 0
 	}
 
 	/*

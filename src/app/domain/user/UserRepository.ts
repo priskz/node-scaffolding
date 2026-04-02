@@ -1,6 +1,14 @@
-import { EntityRepository } from 'typeorm'
-import { TypeORMRepository } from '~/lib/domain/TypeORMRepository'
-import { User } from './'
+import { PrismaRepository } from '~/lib/domain'
+import { User } from '~/generated/prisma/client'
 
-@EntityRepository(User)
-export class UserRepository extends TypeORMRepository<User> {}
+export class UserRepository extends PrismaRepository<User> {
+	/*
+	 * Prisma model name
+	 */
+	protected modelName = 'user'
+
+	/*
+	 * Soft deletes
+	 */
+	protected softDeletes = true
+}

@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String?
+  firstName String?   @map("first_name")
+  lastName  String?   @map("last_name")
+  country   String?
+  birthdate DateTime?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  sessions Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  userId    Int?      @map("user_id")
+  agent     String?
+  ipAddress String?   @map("ip_address")
+  expiresAt DateTime? @map("expires_at")
+  activeAt  DateTime  @default(now()) @map("active_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Content {
+  id         String    @id @default(uuid())
+  title      String?
+  subtitle   String?
+  body       String?
+  slug       String    @unique
+  categoryId String?   @map("category_id")
+  imageId    String?   @map("image_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime? @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  category Category? @relation(fields: [categoryId], references: [id])
+  image    Image?    @relation(fields: [imageId], references: [id])
+  tags     Tag[]     @relation("ContentToTag")
+
+  @@map("content")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  content Content[]
+
+  @@map("category")
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  content Content[] @relation("ContentToTag")
+
+  @@map("tag")
+}
+
+model Image {
+  id          String    @id @default(uuid())
+  name        String?
+  slug        String    @unique
+  url         String
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  content Content[]
+
+  @@map("image")
+}

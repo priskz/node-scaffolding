@@ -1,47 +1,47 @@
-import { createConnection, Connection, ConnectionOptions } from 'typeorm'
+import { PrismaClient } from '~/generated/prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 /*
- * Global Connection Instance
+ * Global Prisma Client Instance
  */
-let instance: Connection
+let instance: PrismaClient
 
 /*
  * Connect Database
  */
-async function connect(options: ConnectionOptions): Promise<boolean> {
-	// Ensure previous connection is disconnected
-	if (instance) {
-		await disconnect()
-	}
+async function connect(): Promise<boolean> {
+	// Init adapter
+	const connectionString = process.env.DATABASE_URL || ''
+	const adapter = new PrismaPg(connectionString)
 
-	// Create new connection
-	instance = await createConnection(options)
+	// Create client
+	instance = new PrismaClient({ adapter })
 
-	// Return connected
-	return instance.isConnected
+	// Connect
+	await instance.$connect()
+
+	// Connected
+	return true
 }
 
 /*
  * Disconnect Database
  */
 async function disconnect(): Promise<boolean> {
-	// Need a connection to disconnect
-	if (instance.isConnected) {
-		// Attempt disconnect
-		await instance.close()
+	// No instance?
+	if( ! instance) return false
 
-		// Return true
-		return true
-	}
+	// Disconnect
+	await instance.$disconnect()
 
-	// Can't disconnect non-existant connection
-	return false
+	// Disconnected
+	return true
 }
 
 /*
- * Retrieve Connection
+ * Retrieve Prisma Client
  */
-function connection(): Connection {
+function client(): PrismaClient {
 	return instance
 }
 
@@ -49,7 +49,7 @@ function connection(): Connection {
  * Export Util
  */
 export const database = {
-	connection,
+	client,
 	connect,
 	disconnect
 }

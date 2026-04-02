@@ -34,7 +34,7 @@ export async function update(req: Request, res: Response): Promise<void> {
 	switch (req.params.type) {
 		case 'content':
 			// Attempt to update content from source
-			updated = await updateContentSearchIndex(req.params.id)
+			updated = await updateContentSearchIndex(req.params.id as string)
 			break
 	}
 

@@ -167,12 +167,13 @@ export async function get(req: Request, res: Response): Promise<void> {
 			// Error
 			respond(req, res).error(result, 404)
 		}
-	} catch (e) {
+	} catch (e: unknown) {
 		// Log error
-		log.error(e)
+		const message = e instanceof Error ? e.message : String(e)
+		log.error(message)
 
 		// Error
-		respond(req, res).exception(e.message)
+		respond(req, res).exception(message)
 	}
 }
 

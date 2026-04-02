@@ -52,6 +52,10 @@ export class AuthRoot {
 		if (!user) return
 
 		// Compare password
+		// No password set?
+		if( ! user.password) return
+
+		// Compare password
 		const valid = await crypt.hash.check(password, user.password)
 
 		// Return

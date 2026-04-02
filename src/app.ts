@@ -1,5 +1,3 @@
-import 'reflect-metadata'
-import bodyParser from 'body-parser'
 import cookieParser from 'cookie-parser'
 import compression from 'compression'
 import express, { Express } from 'express'
@@ -30,7 +28,7 @@ async function run(): Promise<Express> {
 	}
 
 	// Connect database
-	await database.connect(config.db)
+	await database.connect()
 
 	// Connect cache
 	await cache.connect(config.cache.driver)
@@ -39,7 +37,7 @@ async function run(): Promise<Express> {
 	instance.use(compression())
 
 	// Parse incoming requests
-	instance.use(bodyParser.json())
+	instance.use(express.json())
 
 	// Parse cookies attached to requests
 	instance.use(cookieParser(env('COOKIE_SECRET')))

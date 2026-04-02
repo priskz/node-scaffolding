@@ -10,7 +10,7 @@ export abstract class AbstractTaskGroup implements SchedulableInterface {
 	/*
 	 * Task Group Description
 	 */
-	protected abstract description: string =
+	protected description: string =
 		'Provides base functionality for Job(s)'
 
 	/*

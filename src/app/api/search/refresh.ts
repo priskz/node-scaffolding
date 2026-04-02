@@ -50,9 +50,9 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 				refreshed = false
 				break
 		}
-	} catch (e) {
+	} catch (e: unknown) {
 		// Log error
-		log.error(e)
+		log.error(e instanceof Error ? e.message : String(e))
 	} finally {
 		// Refreshed?
 		if (refreshed) {

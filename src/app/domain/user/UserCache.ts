@@ -1,4 +1,3 @@
-import { getCustomRepository } from 'typeorm'
 import { cache as GlobalCache, DefaultCache } from '~/lib/util'
 import { User, UserRepository } from './'
 
@@ -29,21 +28,21 @@ export class UserCache extends DefaultCache {
 		const data = await this.getRaw(id)
 
 		// Found?
-		if (data) {
+		if(data) {
 			return JSON.parse(data)
 		}
 
-		// Didn't exist in cache, so cache it now, and return
-		if (cache) {
-			// Find fresh source value
+		// Cache it now?
+		if(cache) {
+			// Find fresh source
 			const source = await this.getSource(id)
 
-			// Convert to JSON and set cache value
-			if (source) {
+			// Found?
+			if(source) {
 				// Add to cache
-				await await this.save(source)
+				await this.save(source)
 
-				// Return uniform data by stringify and parsing rather than hitting cache
+				// Return
 				return JSON.parse(JSON.stringify(source))
 			}
 		}
@@ -53,15 +52,13 @@ export class UserCache extends DefaultCache {
 	 * Save model in cache by given id
 	 */
 	public async saveById(id: number): Promise<boolean> {
-		// Fresh user data to cache
+		// Fresh data
 		const user = await this.getSource(id)
 
-		// Cant cache missing user
-		if (!user) {
-			return false
-		}
+		// Not found?
+		if( ! user) return false
 
-		// Convert to JSON and set cache value
+		// Cache
 		return await this.set(user.id, JSON.stringify(user))
 	}
 
@@ -69,21 +66,21 @@ export class UserCache extends DefaultCache {
 	 * Save given model in cache
 	 */
 	public async save(data: User, refresh = false): Promise<boolean> {
-		// User data
+		// Init
 		let user: User = data
 
-		// Retrieve fresh data if flagged
-		if (refresh) {
+		// Refresh?
+		if(refresh) {
 			const source = await this.getSource(data.id)
 
-			if (source) {
+			if(source) {
 				user = source
 			} else {
 				return false
 			}
 		}
 
-		// Convert to JSON and set cache value
+		// Cache
 		return await this.set(user.id, JSON.stringify(user))
 	}
 
@@ -92,13 +89,9 @@ export class UserCache extends DefaultCache {
 	 */
 	public async getSource(id: number): Promise<User | undefined> {
 		// Init repo
-		const repository = getCustomRepository(UserRepository)
+		const repository = new UserRepository()
 
-		// Find user source data
-		return await repository.findOneById(id, {
-			where: { id: id },
-			relations: ['session'],
-			loadEagerRelations: true
-		})
+		// Find
+		return await repository.findOneById(id)
 	}
 }
