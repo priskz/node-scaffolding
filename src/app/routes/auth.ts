@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { route, RouteConfig } from '~/lib/util'
 import { AuthApi } from '~/app/api'
-import { session } from '~/app/middleware'
+import { authRateLimiter, session } from '~/app/middleware'
 
 // Init Auth Router
 export const auth = Router()
@@ -15,7 +15,7 @@ const routes: RouteConfig[] = [
 		path: '/login',
 		method: 'post',
 		handler: AuthApi.login,
-		middleware: session
+		middleware: [authRateLimiter, session]
 	},
 	{
 		path: '/logout',
@@ -27,7 +27,13 @@ const routes: RouteConfig[] = [
 		path: '/register',
 		method: 'post',
 		handler: AuthApi.register,
-		middleware: session
+		middleware: [authRateLimiter, session]
+	},
+	{
+		path: '/refresh',
+		method: 'post',
+		handler: AuthApi.refresh,
+		middleware: authRateLimiter
 	}
 ]
 

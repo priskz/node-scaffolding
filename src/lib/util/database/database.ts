@@ -1,5 +1,6 @@
 import { PrismaClient } from '~/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { env } from '~/lib/util/env'
 
 /*
  * Global Prisma Client Instance
@@ -11,8 +12,7 @@ let instance: PrismaClient
  */
 async function connect(): Promise<boolean> {
 	// Init adapter
-	const connectionString = process.env.DATABASE_URL || ''
-	const adapter = new PrismaPg(connectionString)
+	const adapter = new PrismaPg(env.DATABASE_URL)
 
 	// Create client
 	instance = new PrismaClient({ adapter })

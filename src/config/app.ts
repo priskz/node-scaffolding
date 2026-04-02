@@ -1,7 +1,9 @@
+import { env } from '~/lib/util'
+
 export const app: AppConfig = {
-	env: process.env.NODE_ENV || 'development',
+	env: env.NODE_ENV,
 	name: 'New App',
-	port: process.env.APP_PORT || '80',
+	port: env.APP_PORT,
 	key: 'SomeSecretSaltValue'
 }
 

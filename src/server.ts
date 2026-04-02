@@ -6,8 +6,10 @@ import { app } from '~/app'
 
 // Init
 let httpServer: Server
+let shuttingDown = false
 
-async function start() {
+async function start()
+{
 	// Create app instance
 	await app.run()
 
@@ -15,17 +17,43 @@ async function start() {
 	httpServer = createServer(app.instance)
 
 	// Listen on configured port
-	httpServer.listen(env('APP_PORT'), () =>
-		log.info(`---> Server listening on port ${env('APP_PORT')} <---`)
+	httpServer.listen(env.APP_PORT, () =>
+		log.info(`---> Server listening on port ${env.APP_PORT} <---`)
 	)
 }
 
-async function stop() {
-	// Stop listen
-	httpServer.close()
+async function stop()
+{
+	// Already shutting down?
+	if(shuttingDown) return
+	shuttingDown = true
 
-	// Shut app down
-	await app.shutdown()
+	log.info('Graceful shutdown initiated...')
+
+	// Close HTTP server — stop accepting new connections
+	httpServer.close(() =>
+	{
+		log.info('HTTP server closed')
+	})
+
+	// Shut app down — disconnect DB, cache, schedule
+	try
+	{
+		await app.shutdown()
+		log.info('All services disconnected')
+	}
+	catch(e: unknown)
+	{
+		const message = e instanceof Error ? e.message : String(e)
+		log.error(`Shutdown error: ${message}`)
+	}
+
+	// Exit
+	process.exit(0)
 }
+
+// Graceful shutdown signals
+process.on('SIGTERM', stop)
+process.on('SIGINT', stop)
 
 start()

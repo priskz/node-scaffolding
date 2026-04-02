@@ -11,6 +11,12 @@ export default defineConfig({
 		globals: true,
 		environment: 'node',
 		include: ['src/**/*.spec.ts'],
+		env: {
+			NODE_ENV: 'test',
+			APP_PORT: '3001',
+			COOKIE_SECRET: 'test-cookie-secret',
+			DATABASE_URL: 'postgresql://localhost:5432/test',
+		},
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'text-summary', 'html'],

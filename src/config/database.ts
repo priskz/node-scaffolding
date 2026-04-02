@@ -1,3 +1,5 @@
+import { env } from '~/lib/util'
+
 /*
  * Database configuration
  *
@@ -10,5 +12,5 @@ export interface DbConfig {
 }
 
 export const db: DbConfig = {
-	url: process.env.DATABASE_URL || ''
+	url: env.DATABASE_URL
 }

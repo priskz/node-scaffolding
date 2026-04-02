@@ -1,15 +1,15 @@
 import { env } from '~/lib/util'
 
 export const cache: CacheConfig = {
-	default: env('REDIS_CACHE_DEFAULT'),
+	default: env.REDIS_CACHE_DEFAULT as Driver,
 	get driver() {
 		return this.store[this.default]
 	},
 	store: {
 		redis: {
-			host: env('REDIS_CACHE_HOST'),
-			port: env('REDIS_CACHE_PORT'),
-			db: env('REDIS_CACHE_DB_DEFAULT')
+			host: env.REDIS_CACHE_HOST,
+			port: env.REDIS_CACHE_PORT,
+			db: env.REDIS_CACHE_DB_DEFAULT
 		}
 	}
 }

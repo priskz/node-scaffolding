@@ -1,7 +1,15 @@
 import { Request, Response } from 'express'
-import { Validator } from 'node-input-validator'
+import { z } from 'zod'
 import { respond } from '~/lib/util'
 import { ContentService } from '~/app/service/data'
+
+/*
+ * Param Schema
+ */
+const paramsSchema = z.object({
+	type: z.enum(['content']),
+	id: z.string().min(1)
+})
 
 /*
  * Update Content's Search Index
@@ -15,14 +23,12 @@ async function updateContentSearchIndex(id: string): Promise<boolean> {
 }
 
 export async function update(req: Request, res: Response): Promise<void> {
-	// Prepare validation
-	const input = new Validator(req.params, {
-		type: 'required|in:content',
-		id: 'required'
-	})
-
 	// Validate
-	if (!(await input.check())) {
+	const input = paramsSchema.safeParse(req.params)
+
+	// Invalid?
+	if( ! input.success)
+	{
 		respond(req, res).error()
 		return
 	}
@@ -31,10 +37,10 @@ export async function update(req: Request, res: Response): Promise<void> {
 	let updated = false
 
 	// Determine logic based on type
-	switch (req.params.type) {
+	switch (input.data.type) {
 		case 'content':
 			// Attempt to update content from source
-			updated = await updateContentSearchIndex(req.params.id as string)
+			updated = await updateContentSearchIndex(input.data.id)
 			break
 	}
 

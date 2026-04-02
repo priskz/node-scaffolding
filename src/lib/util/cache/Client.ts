@@ -1,6 +1,7 @@
 import { promisify } from 'es6-promisify'
 import { ClientOpts, RedisClient } from 'redis'
 import { Logger } from '~/lib/util'
+import { env } from '~/lib/util/env'
 
 /*
  * Default Client Options
@@ -52,7 +53,7 @@ export class Client {
 	 */
 	constructor(option: ClientOptions = {}, client?: RedisClient) {
 		// Set debug based on ENV var
-		this.debug = process.env.DEBUG_MODE === 'true'
+		this.debug = env.DEBUG_MODE === 'true'
 
 		// Client provided?
 		if (client) {

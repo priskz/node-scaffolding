@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
+import { z } from 'zod'
 import { config } from '~/config'
-import { Validator } from 'node-input-validator'
 import { ContentSource } from '~/app/domain'
 import { ContentSearch } from '~/app/domain'
 import {
@@ -10,6 +10,29 @@ import {
 	SearchOptions,
 	SearchResult
 } from '~/lib/util'
+
+/*
+ * Param Schema
+ */
+const paramsSchema = z.object({
+	type: z.enum(['content'])
+})
+
+/*
+ * Body Schema
+ */
+const bodySchema = z.object({
+	raw: z.any().optional(),
+	text: z.string().optional(),
+	sort: z.record(z.string(), z.string()).optional(),
+	filter: z.record(z.string(), z.unknown()).optional(),
+	fields: z.array(z.string()).optional(),
+	size: z.number().int().optional(),
+	from: z.number().int().optional()
+}).refine(
+	data => data.raw !== undefined || data.text !== undefined,
+	{ message: 'Either raw or text is required' }
+)
 
 /*
  * Default Find Query
@@ -122,31 +145,22 @@ async function find(
  * Search for Content
  */
 export async function get(req: Request, res: Response): Promise<void> {
-	// Param validation
-	const params = new Validator(req.params, {
-		type: 'required|in:content'
-	})
+	// Validate params
+	const params = paramsSchema.safeParse(req.params)
 
-	// Valid parameters?
-	if (!(await params.check())) {
+	// Invalid?
+	if( ! params.success)
+	{
 		respond(req, res).error()
 		return
 	}
 
-	// Param validation
-	const body = new Validator(req.body, {
-		raw: 'requiredWithout:text',
-		text: 'requiredWithout:raw',
-		sort: 'object|sometimes',
-		filter: 'object|sometimes',
-		fields: 'arrayUnique|sometimes',
-		size: 'integer|sometimes',
-		from: 'integer|sometimes'
-	})
+	// Validate body
+	const body = bodySchema.safeParse(req.body)
 
-	// Valid body?
-	if (!(await body.check())) {
-		// Error
+	// Invalid?
+	if( ! body.success)
+	{
 		respond(req, res).error()
 		return
 	}

@@ -1,3 +1,4 @@
+import { env } from '~/lib/util'
 import { LogConfig as BaseLogConfig, LoggerConfig } from '~/lib/util'
 
 export const log: LogConfig = {
@@ -9,7 +10,7 @@ export const log: LogConfig = {
 				type: 'file',
 				options: {
 					level: 'info',
-					filename: `./log/app.${process.env.NODE_ENV}.log`,
+					filename: `./log/app.${env.NODE_ENV}.log`,
 					handleExceptions: true,
 					maxsize: 5242880, // 5MB
 					maxFiles: 5

@@ -1,30 +1,33 @@
 import { Request, Response } from 'express'
-import { Validator } from 'node-input-validator'
+import { z } from 'zod'
 import { respond } from '~/lib/util'
 import { config } from '~/config'
 import { AuthRoot } from '~/app/service'
 
-export async function login(req: Request, res: Response): Promise<void> {
+/*
+ * Login Schema
+ */
+const loginSchema = z.object({
+	email: z.string().email(),
+	pass: z.string().min(1)
+})
+
+export async function login(req: Request, res: Response): Promise<void>
+{
 	// Session have a user?
-	if (req.getUser()) {
-		// Error response
+	if(req.getUser())
+	{
 		respond(req, res).error()
 		return
 	}
 
-	// Prepare validation
-	const input = new Validator(req.body, {
-		email: 'required|email',
-		pass: 'required'
-	})
-
 	// Validate
-	const valid = await input.check()
+	const input = loginSchema.safeParse(req.body)
 
 	// Invalid?
-	if (!valid) {
-		// Error response
-		respond(req, res).error(null, 401)
+	if( ! input.success)
+	{
+		respond(req, res).error(input.error.flatten().fieldErrors, 400)
 		return
 	}
 
@@ -34,13 +37,13 @@ export async function login(req: Request, res: Response): Promise<void> {
 	// Attempt login
 	const session = await service.login(
 		req.getSession(),
-		req.body.email,
-		req.body.pass
+		input.data.email,
+		input.data.pass
 	)
 
 	// Failed login?
-	if (!session) {
-		// Error response
+	if( ! session)
+	{
 		respond(req, res).error(null, 401)
 		return
 	}

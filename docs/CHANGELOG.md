@@ -13,6 +13,19 @@ All notable changes to this project will be documented in this file.
 - tsx for development (watch mode) and tsc + tsc-alias for production builds
 - prisma:generate, prisma:migrate, prisma:studio npm scripts
 
+### Added (Tier 2 — Core Features)
+- Zod environment validation — fail-fast at startup with typed env object
+- Zod request validation — replaces node-input-validator across all handlers
+- Structured error classes — AppError base with ValidationError, AuthenticationError, ForbiddenError, NotFoundError, ConflictError
+- Health check endpoint — GET /health with DB status, uptime, memory usage
+- Graceful shutdown — SIGTERM/SIGINT handlers, connection draining
+- Helmet.js security headers
+- CORS middleware with env-configurable origins
+- Rate limiting — global (configurable) + strict auth-specific limiter
+- JWT authentication — jose, access + refresh tokens, middleware, refresh endpoint
+- Prisma transaction helper — wraps $transaction with consistent error handling
+- 22 Vitest specs covering error classes, JWT, transactions, env validation, null convention
+
 ### Changed
 - TypeScript upgraded from 3.9 to 6.0
 - DataService base class updated to use PrismaRepository
@@ -31,3 +44,4 @@ All notable changes to this project will be documented in this file.
 - TSLint-era ESLint config (.eslintrc)
 - body-parser (replaced by express.json())
 - Old spec files (49 files using Mocha/Chai syntax — replaced by Vitest framework)
+- node-input-validator (replaced by Zod)

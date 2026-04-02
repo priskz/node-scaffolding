@@ -24,6 +24,11 @@ const routes: RouteConfig[] = [
 		path: '/ping',
 		method: 'get',
 		handler: AuxApi.ping
+	},
+	{
+		path: '/health',
+		method: 'get',
+		handler: AuxApi.health
 	}
 ]
 

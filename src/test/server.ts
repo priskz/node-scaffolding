@@ -19,7 +19,7 @@ async function start(): Promise<void> {
 	httpServer = createServer(app.instance)
 
 	// Listen on configured port
-	httpServer.listen(env('APP_PORT'))
+	httpServer.listen(env.APP_PORT)
 }
 
 /*
