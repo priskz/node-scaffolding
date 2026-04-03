@@ -9,6 +9,7 @@ import { mail, MailConfig } from './mail'
 import { search, SearchConfig } from './search'
 import { schedule, ScheduleConfig } from './schedule'
 import { session, SessionConfig } from './session'
+import { socket, SocketConfig } from './socket'
 
 export const config: ConfigDictionary = {
 	api,
@@ -20,7 +21,8 @@ export const config: ConfigDictionary = {
 	mail,
 	search,
 	session,
-	schedule
+	schedule,
+	socket,
 }
 
 interface ConfigDictionary {
@@ -34,4 +36,5 @@ interface ConfigDictionary {
 	search: SearchConfig
 	session: SessionConfig
 	schedule: ScheduleConfig
+	socket: SocketConfig
 }

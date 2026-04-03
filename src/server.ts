@@ -1,7 +1,8 @@
 /* istanbul ignore file */
 import './env'
 import { Server, createServer } from 'http'
-import { env, log } from '~/lib/util'
+import { env, log, socket } from '~/lib/util'
+import { config } from '~/config'
 import { app } from '~/app'
 
 // Init
@@ -15,6 +16,15 @@ async function start(): Promise<void>
 
 	// Create server instance
 	httpServer = createServer(app.instance)
+
+	// Initialize socket.io when enabled
+	if(config.socket.enabled)
+	{
+		socket.init(httpServer, {
+			path: config.socket.path,
+			cors: { origin: config.socket.corsOrigin },
+		})
+	}
 
 	// Listen on configured port
 	httpServer.listen(env.APP_PORT, () =>

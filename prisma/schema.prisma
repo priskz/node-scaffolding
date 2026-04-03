@@ -99,3 +99,28 @@ model Image {
 
   @@map("image")
 }
+
+model Event {
+  id        String   @id @default(uuid())
+  type      String
+  tenantId  String?  @map("tenant_id")
+  actorId   String?  @map("actor_id")
+  payload   Json?
+  timestamp DateTime @default(now())
+
+  @@index([type])
+  @@index([tenantId])
+  @@index([timestamp])
+  @@map("event")
+}
+
+model Tenant {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  status    String    @default("active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@map("tenant")
+}

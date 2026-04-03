@@ -1,5 +1,6 @@
 import { Session, User } from '~/app/domain'
 import { TokenPayload } from '~/lib/util'
+import type { TenantRecord } from '~/lib/util/tenant'
 
 declare module 'express-serve-static-core' {
 	interface Request {
@@ -10,5 +11,7 @@ declare module 'express-serve-static-core' {
 		getSession: () => Session
 		getUser: () => User
 		jwtPayload?: TokenPayload
+		tenantId?: string
+		tenant?: TenantRecord
 	}
 }

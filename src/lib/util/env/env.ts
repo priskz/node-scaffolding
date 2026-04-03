@@ -59,6 +59,21 @@ const envSchema = z.object({
 	STORAGE_S3_ACCESS_KEY: z.string().optional(),
 	STORAGE_S3_SECRET_KEY: z.string().optional(),
 	STORAGE_S3_ENDPOINT: z.string().optional(),
+
+	// Socket
+	SOCKET_ENABLED: z.string().default('false'),
+	SOCKET_PATH: z.string().default('/socket.io'),
+	SOCKET_CORS_ORIGIN: z.string().default('*'),
+
+	// Events
+	EVENT_STREAM_ENABLED: z.string().default('false'),
+	EVENT_STREAM_KEY: z.string().default('rhizome:events'),
+
+	// Tenancy
+	TENANCY_ENABLED: z.string().default('false'),
+	TENANCY_STRATEGY: z.enum(['row', 'schema']).default('row'),
+	TENANCY_RESOLVER: z.enum(['header', 'subdomain', 'path']).default('header'),
+	TENANCY_HEADER: z.string().default('X-Tenant-ID'),
 })
 
 /*

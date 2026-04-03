@@ -6,7 +6,7 @@ import helmet from 'helmet'
 import { config } from '~/config'
 import { global, exception, rateLimiter, requestLogger } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, env, log, mail, schedule } from '~/lib/util'
+import { cache, database, env, event, log, mail, schedule, socket } from '~/lib/util'
 
 /*
  * Instantiate App Framework
@@ -81,6 +81,8 @@ async function run(): Promise<Express>
  */
 async function shutdown(): Promise<void>
 {
+	await socket.close()
+	event.close()
 	await database.disconnect()
 	await cache.disconnect()
 	mail.close()
