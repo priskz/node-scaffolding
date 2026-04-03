@@ -1,6 +1,7 @@
 import { PrismaClient } from '~/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { env } from '~/lib/util/env'
+import { withSoftDeletes } from './extensions'
 
 /*
  * Global Prisma Client Instance
@@ -14,8 +15,11 @@ async function connect(): Promise<boolean> {
 	// Init adapter
 	const adapter = new PrismaPg(env.DATABASE_URL)
 
-	// Create client
-	instance = new PrismaClient({ adapter })
+	// Create base client
+	const base = new PrismaClient({ adapter })
+
+	// Apply extensions
+	instance = withSoftDeletes(base)
 
 	// Connect
 	await instance.$connect()

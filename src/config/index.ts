@@ -10,6 +10,7 @@ import { search, SearchConfig } from './search'
 import { schedule, ScheduleConfig } from './schedule'
 import { session, SessionConfig } from './session'
 import { socket, SocketConfig } from './socket'
+import { webhook, WebhookConfig } from './webhook'
 
 export const config: ConfigDictionary = {
 	api,
@@ -23,6 +24,7 @@ export const config: ConfigDictionary = {
 	session,
 	schedule,
 	socket,
+	webhook,
 }
 
 interface ConfigDictionary {
@@ -37,4 +39,5 @@ interface ConfigDictionary {
 	session: SessionConfig
 	schedule: ScheduleConfig
 	socket: SocketConfig
+	webhook: WebhookConfig
 }

@@ -29,6 +29,7 @@
 		"@react-email/render": "^2.0.5",
 		"axios": "^0.21.2",
 		"bcrypt": "^5.0.0",
+		"bullmq": "^5.72.1",
 		"compression": "^1.7.4",
 		"cookie-parser": "^1.4.5",
 		"cors": "^2.8.6",

@@ -124,3 +124,39 @@ model Tenant {
 
   @@map("tenant")
 }
+
+model Webhook {
+  id        String    @id @default(uuid())
+  url       String
+  secret    String
+  events    String[]
+  tenantId  String?   @map("tenant_id")
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId])
+  @@index([active])
+  @@map("webhook")
+}
+
+model WebhookDelivery {
+  id            String    @id @default(uuid())
+  webhookId     String    @map("webhook_id")
+  eventId       String?   @map("event_id")
+  eventType     String    @map("event_type")
+  status        String    @default("pending")
+  attempts      Int       @default(0)
+  lastAttemptAt DateTime? @map("last_attempt_at")
+  nextAttemptAt DateTime? @map("next_attempt_at")
+  response      Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([status])
+  @@map("webhook_delivery")
+}

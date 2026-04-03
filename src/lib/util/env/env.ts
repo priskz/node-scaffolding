@@ -74,6 +74,11 @@ const envSchema = z.object({
 	TENANCY_STRATEGY: z.enum(['row', 'schema']).default('row'),
 	TENANCY_RESOLVER: z.enum(['header', 'subdomain', 'path']).default('header'),
 	TENANCY_HEADER: z.string().default('X-Tenant-ID'),
+
+	// Webhooks
+	WEBHOOK_QUEUE_ENABLED: z.string().default('false'),
+	WEBHOOK_MAX_RETRIES: z.coerce.number().default(5),
+	WEBHOOK_RETRY_DELAY: z.coerce.number().default(5000),
 })
 
 /*

@@ -6,7 +6,7 @@ import helmet from 'helmet'
 import { config } from '~/config'
 import { global, exception, rateLimiter, requestLogger } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, env, event, log, mail, schedule, socket } from '~/lib/util'
+import { cache, database, env, event, log, mail, schedule, socket, webhook } from '~/lib/util'
 
 /*
  * Instantiate App Framework
@@ -72,6 +72,21 @@ async function run(): Promise<Express>
 	// Add exception handler (should be last use)
 	instance.use(exception)
 
+	// Init webhook dispatcher
+	if(config.webhook.enabled)
+	{
+		webhook.init({
+			host: env.CACHE_HOST,
+			port: env.CACHE_PORT,
+			maxRetries: config.webhook.maxRetries,
+			retryDelay: config.webhook.retryDelay,
+		})
+		webhook.dispatcher.init({
+			maxRetries: config.webhook.maxRetries,
+			retryDelay: config.webhook.retryDelay,
+		})
+	}
+
 	// Return Express
 	return instance
 }
@@ -81,6 +96,8 @@ async function run(): Promise<Express>
  */
 async function shutdown(): Promise<void>
 {
+	webhook.dispatcher.close()
+	await webhook.close()
 	await socket.close()
 	event.close()
 	await database.disconnect()

@@ -1,4 +1,5 @@
 export * from './AdvancedWhereClause'
 export * from './GetConfig'
+export * from './pagination'
 export * from './Query'
 export * from './WhereClause'

@@ -1,4 +1,11 @@
-import { PrismaRepository, Query } from '~/lib/domain'
+import { PrismaRepository } from '~/lib/domain'
+import type {
+	Query,
+	PaginationQuery,
+	PaginatedResult,
+	CursorPaginationQuery,
+	CursorPaginatedResult,
+} from '~/lib/domain'
 
 export class DataService<T> {
 	/*
@@ -27,6 +34,24 @@ export class DataService<T> {
 	public async getWithCount(query: Query<T> = {}): Promise<[T[], number]> {
 		// Execute
 		return await this.repository.getWithCount(query)
+	}
+
+	/*
+	 * Paginate — offset-based
+	 */
+	public async paginate(query: Query<T> = {}, pagination: PaginationQuery = {}): Promise<PaginatedResult<T>>
+	{
+		// Execute
+		return await this.repository.paginate(query, pagination)
+	}
+
+	/*
+	 * Cursor Paginate — cursor-based
+	 */
+	public async cursorPaginate(query: Query<T> = {}, pagination: CursorPaginationQuery = {}): Promise<CursorPaginatedResult<T>>
+	{
+		// Execute
+		return await this.repository.cursorPaginate(query, pagination)
 	}
 
 	/*
@@ -61,5 +86,23 @@ export class DataService<T> {
 	public async delete(id: number | string): Promise<boolean> {
 		// Execute
 		return await this.repository.delete(id)
+	}
+
+	/*
+	 * Restore — undo a soft delete
+	 */
+	public async restore(id: number | string): Promise<T | undefined>
+	{
+		// Execute
+		return await this.repository.restore(id)
+	}
+
+	/*
+	 * Force Delete — permanent removal
+	 */
+	public async forceDelete(id: number | string): Promise<boolean>
+	{
+		// Execute
+		return await this.repository.forceDelete(id)
 	}
 }

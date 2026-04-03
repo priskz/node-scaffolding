@@ -13,6 +13,43 @@ All notable changes to this project will be documented in this file.
 - tsx for development (watch mode) and tsc + tsc-alias for production builds
 - prisma:generate, prisma:migrate, prisma:studio npm scripts
 
+### Added (Tier 4 — Data/Domain)
+- Pagination — standardized envelope with offset-based (`paginate()`) and cursor-based (`cursorPaginate()`) on PrismaRepository and DataService
+- PaginationMeta, PaginatedResult<T>, CursorPaginationMeta, CursorPaginatedResult<T> types
+- Soft deletes — Prisma client extension intercepting findMany, findFirst, findUnique, count to auto-filter `deletedAt: null`
+- Soft delete bypass via `withTrashed: true` on Query type
+- `restore()` and `forceDelete()` methods on PrismaRepository and DataService
+- Soft-deletable models: User, Session, Content, Category, Tag, Image
+- Webhook dispatcher — BullMQ-backed outbound webhook delivery with exponential backoff retry
+- Webhook registration model (url, secret, events[], tenantId, active) with delivery tracking
+- WebhookDispatcher subscribes to all EventService events and enqueues matching deliveries
+- WebhookSigner — HMAC-SHA256 payload signing and verification for webhook consumers
+- WebhookQueue — BullMQ Queue + Worker wrapper with configurable concurrency and retry
+- WEBHOOK_QUEUE_ENABLED, WEBHOOK_MAX_RETRIES, WEBHOOK_RETRY_DELAY env vars
+- Prisma migration for Webhook and WebhookDelivery models
+- 37 new tests (pagination 10, soft delete extension 7, PrismaRepository 6, signer 7, dispatcher 4, queue 3)
+
+### Changed (Tier 4)
+- PrismaRepository `buildWhere` no longer manually adds `deletedAt: null` — Prisma client extension handles read filtering
+- PrismaRepository `findOneById` simplified — soft delete filter removed (handled by extension)
+- database.ts applies `withSoftDeletes` extension to Prisma client after creation
+
+### Added (Tier 3C — Socket.io, EventService, Multi-tenancy)
+- Socket.io room-based pub/sub — SocketService with init, emit, join, leave, connections, close
+- Socket.io config with SOCKET_ENABLED, SOCKET_PATH, SOCKET_CORS_ORIGIN env vars
+- httpServer wired from server.ts to socket.init when enabled
+- EventService — domain events persisted to PostgreSQL via Prisma Event model
+- EventBus — EventEmitter2 wrapper with wildcard listener support (e.g. `user.*`)
+- Valkey stream publishing stubbed (debug log, no-op — real implementation in Stage 2)
+- EVENT_STREAM_ENABLED, EVENT_STREAM_KEY env vars
+- Multi-tenancy — TenantContext via AsyncLocalStorage with row-level isolation
+- Tenant resolvers — header, subdomain, path (configurable via TENANCY_RESOLVER)
+- Tenant middleware — per-route-group (not global), matching validated DMF pattern
+- TENANCY_ENABLED, TENANCY_STRATEGY, TENANCY_RESOLVER, TENANCY_HEADER env vars
+- Prisma migration for Event and Tenant models
+- Express.Request augmented with tenantId and tenant properties
+- 30 new tests (SocketService 10, EventBus 5, EventService 5, TenantContext 5, TenantMiddleware 5)
+
 ### Added (Tier 3B — Cache + Email)
 - ioredis cache client replacing redis v3 + es6-promisify — Valkey 8 compatible
 - CacheClient with lazy connect, event logging via Pino child logger
