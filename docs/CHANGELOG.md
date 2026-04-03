@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added (Tier 5A — Auth Features: RBAC + API Keys)
+- RBAC service (`src/lib/util/rbac/`) — getUserPermissions, hasPermission, hasRole, hasAnyPermission, hasAllPermissions with Valkey cache via remember() pattern (5-minute TTL)
+- clearPermissionCache for cache invalidation when roles change
+- requirePermission('action') and requireAnyPermission(['a', 'b']) Express middleware guards — works with both JWT and API key auth contexts
+- requireRole('admin') Express middleware guard — JWT auth only
+- API key service (`src/lib/util/api-key/`) — generateApiKey (plaintext returned once), validateApiKey (prefix lookup + SHA-256 hash compare), revokeApiKey (deactivate, not delete)
+- API key features: scoped permissions array, optional expiry, last-used tracking, prefix-based fast lookup
+- apiKeyAuth middleware — validates X-API-Key header, attaches scoped permissions to req.apiKeyPermissions
+- authenticate middleware — unified auth: checks JWT Bearer first, falls back to API key, first valid wins
+- Prisma models: Role, Permission, UserRole, RolePermission, ApiKey with migration
+- Express Request type extended with apiKeyPermissions
+- 45 new tests (171 total)
+
 ### Added
 - Prisma 7 ORM with PostgreSQL adapter, replacing TypeORM 0.2
 - Prisma schema with all 6 entities (User, Session, Content, Category, Tag, Image)

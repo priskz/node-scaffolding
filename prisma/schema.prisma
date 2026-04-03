@@ -20,6 +20,8 @@ model User {
   deletedAt DateTime? @map("deleted_at")
 
   sessions Session[]
+  roles    UserRole[]
+  apiKeys  ApiKey[]
 
   @@map("user")
 }
@@ -159,4 +161,74 @@ model WebhookDelivery {
   @@index([webhookId])
   @@index([status])
   @@map("webhook_delivery")
+}
+
+model Role {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("role")
+}
+
+model Permission {
+  id          String    @id @default(uuid())
+  action      String    @unique
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  roles RolePermission[]
+
+  @@map("permission")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    Int      @map("user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_role")
+}
+
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String   @map("role_id")
+  permissionId String   @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permission")
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  name        String
+  prefix      String    @unique
+  hash        String
+  userId      Int       @map("user_id")
+  permissions String[]
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([active])
+  @@map("api_key")
 }
