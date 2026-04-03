@@ -6,7 +6,7 @@ import helmet from 'helmet'
 import { config } from '~/config'
 import { global, exception, rateLimiter, requestLogger } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, env, log, schedule } from '~/lib/util'
+import { cache, database, env, log, mail, schedule } from '~/lib/util'
 
 /*
  * Instantiate App Framework
@@ -35,7 +35,7 @@ async function run(): Promise<Express>
 	await database.connect()
 
 	// Connect cache
-	await cache.connect(config.cache.driver)
+	await cache.connect(config.cache)
 
 	// Request logging + requestId context
 	instance.use(requestLogger)
@@ -83,6 +83,7 @@ async function shutdown(): Promise<void>
 {
 	await database.disconnect()
 	await cache.disconnect()
+	mail.close()
 	await schedule.stop()
 }
 

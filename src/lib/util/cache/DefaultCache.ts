@@ -1,224 +1,187 @@
-import { Client } from './'
+import type Redis from 'ioredis'
 import { log } from '~/lib/util/log'
+import { cacheClient } from './cache-client'
+import type { CacheOptions } from './types'
 
-export class DefaultCache {
+/*
+ * Default Cache
+ *
+ * Base class for domain caches (ContentCache, UserCache, etc.).
+ * Provides key prefixing, TTL, DB selection, and JSON serialization.
+ * Subclasses override prefix, db, and ttl as needed.
+ */
+export class DefaultCache
+{
 	/*
-	 * The _client storage bucket this should act upon
-	 */
-	protected bucket = 0
-
-	/*
-	 * Cache storage key prefix
+	 * Cache key prefix
 	 */
 	protected prefix = ''
 
 	/*
-	 * Time To Live (seconds) Infinite = 0
+	 * Valkey database number
+	 */
+	protected db = 0
+
+	/*
+	 * Time to live (seconds). 0 = no expiry.
 	 */
 	protected ttl = 0
 
 	/*
-	 * Cache client
-	 */
-	private _client: Client
-
-	/*
 	 * Constructor
-	 * @arg options._client: If not provided, use global _client if exists, otherwise use default _client
 	 */
-	constructor(options: CacheOptions = {}) {
-		// Set _client
-		if (options.client) {
-			this._client = options.client
-		} else {
-			// Default
-			this._client = new Client()
-		}
-
-		// Set options
-		if (options.bucket) this.bucket = options.bucket
-		if (options.prefix) this.prefix = options.prefix
-		if (options.ttl) this.ttl = options.ttl
+	constructor(options: CacheOptions = {})
+	{
+		if(options.prefix) { this.prefix = options.prefix }
+		if(options.db !== undefined) { this.db = options.db }
+		if(options.ttl !== undefined) { this.ttl = options.ttl }
 	}
 
 	/*
-	 * Retrieve Client
+	 * Retrieve the ioredis client
 	 */
-	public client(): Client {
-		return this._client
+	protected client(): Redis
+	{
+		return cacheClient.instance()
 	}
 
 	/*
 	 * Set an item in cache
 	 */
-	public async set(id: string | number, data: unknown): Promise<boolean> {
-		// Init _client value
-		let value = typeof data === 'string' ? data : ''
+	public async set(id: string | number, data: unknown): Promise<boolean>
+	{
+		// Init value
+		let value: string
 
-		// Set the bucket
-		await this._client.selectBucket(this.bucket)
-
-		// Data not a string? Attempt to convert to json string
-		if (typeof data !== 'string') {
-			try {
+		// Serialize
+		if(typeof data === 'string')
+		{
+			value = data
+		}
+		else
+		{
+			try
+			{
 				value = JSON.stringify(data)
-			} catch (error) {
-				if(this.client().getDebug())
-				{
-					log.error({ value, error }, 'DefaultCache unable to JSON.stringify')
-				}
-
+			}
+			catch(error)
+			{
+				log.error({ error }, 'DefaultCache unable to JSON.stringify')
 				return false
 			}
 		}
 
-		if (this.ttl > 0) {
-			// Set the value w/expiration
-			return await this._client.set(this.parseKey(id), value, 'EX', this.ttl)
+		// Build key
+		const key = this.parseKey(id)
+
+		// Select database
+		await this.client().select(this.db)
+
+		// Set with optional TTL
+		if(this.ttl > 0)
+		{
+			const result = await this.client().set(key, value, 'EX', this.ttl)
+			return result === 'OK'
 		}
 
-		// Set the value
-		return await this._client.set(this.parseKey(id), value)
+		const result = await this.client().set(key, value)
+		return result === 'OK'
 	}
 
 	/*
-	 * Retrieve an raw item value from cache
+	 * Retrieve a raw string value from cache
 	 */
-	public async getRaw(id: string | number): Promise<string | null> {
-		// Set the bucket
-		await this._client.selectBucket(this.bucket)
+	public async getRaw(id: string | number): Promise<string | null>
+	{
+		// Select database
+		await this.client().select(this.db)
 
-		// Retrieve value
-		return await this._client.get(this.parseKey(id))
+		// Get value
+		return await this.client().get(this.parseKey(id))
 	}
 
 	/*
-	 * Retrieve an item from cache
+	 * Retrieve a parsed value from cache
 	 */
-	public async get<T>(id: string | number): Promise<T | null> {
-		// Retrieve raw value
+	public async get<T>(id: string | number): Promise<T | null>
+	{
+		// Get raw
 		const value = await this.getRaw(id)
 
-		// Return undefined if null
-		if (!value) return null
+		// Not found?
+		if(value === null) { return null }
 
-		// JSON?
-		try {
-			// Return object if parsable
-			return JSON.parse(value)
-		} catch (e) {
-			// Return raw value
+		// Parse JSON
+		try
+		{
+			return JSON.parse(value) as T
+		}
+		catch
+		{
 			return null
 		}
 	}
 
 	/*
-	 * Remove / delete an item from cache
+	 * Remove an item from cache
 	 */
-	public async remove(id: string | number): Promise<boolean> {
-		// Set the bucket
-		await this._client.selectBucket(this.bucket)
+	public async remove(id: string | number): Promise<boolean>
+	{
+		// Select database
+		await this.client().select(this.db)
 
-		// Retrieve value
-		return await this._client.remove(this.parseKey(id))
+		// Delete
+		const count = await this.client().del(this.parseKey(id))
+
+		return count > 0
 	}
 
 	/*
-	 * Retrieve keys in configured bucket matching prefix
+	 * Retrieve all keys matching this cache's prefix
 	 */
-	public async keys(): Promise<string[]> {
-		// Set the bucket
-		await this._client.selectBucket(this.bucket)
+	public async keys(): Promise<string[]>
+	{
+		// Select database
+		await this.client().select(this.db)
 
-		// Retrieve value
-		return await this._client.keys(`${this.parseKey('')}*`)
+		// Scan for keys
+		return await this.client().keys(`${this.parseKey('')}*`)
 	}
 
 	/*
-	 * Flush all keys for configured bucket & prefix by default unless given pattern
+	 * Flush all keys for this cache's prefix
 	 */
-	public async flush(pattern?: string): Promise<boolean> {
-		// Set the bucket
-		await this._client.selectBucket(this.bucket)
+	public async flush(pattern?: string): Promise<boolean>
+	{
+		// Select database
+		await this.client().select(this.db)
 
-		// Init
-		let keys: string[] = []
+		// Determine keys to remove
+		const keys = pattern
+			? await this.client().keys(pattern)
+			: await this.keys()
 
-		// Pattern given?
-		if (pattern) {
-			// Get keys by pattern
-			keys = await this._client.keys(pattern)
-		} else {
-			// Get keys by class configuration
-			keys = await this.keys()
+		// Nothing to remove?
+		if(keys.length < 1) { return true }
+
+		// Remove all
+		const count = await this.client().del(...keys)
+
+		return count > 0
+	}
+
+	/*
+	 * Build a prefixed cache key
+	 */
+	public parseKey(id: string | number): string
+	{
+		const idStr = id.toString()
+
+		if(this.prefix)
+		{
+			return `${this.prefix}:${idStr}`
 		}
 
-		// Nothing to remove
-		if (keys.length < 1) return true
-
-		// Remove all at once
-		return await this._client.remove(keys)
+		return idStr
 	}
-
-	/*
-	 * Set bucket property
-	 */
-	public setBucket(bucket: number): void {
-		this.bucket = bucket
-	}
-
-	/*
-	 * Set prefix property
-	 */
-	public setPrefix(prefix: string): void {
-		this.prefix = prefix
-	}
-
-	/*
-	 * Set ttl property
-	 */
-	public setTtl(ttl: number): void {
-		this.ttl = ttl
-	}
-
-	/*
-	 * Get bucket property
-	 */
-	public getBucket(): number {
-		return this.bucket
-	}
-
-	/*
-	 * Get prefix property
-	 */
-	public getPrefix(): string {
-		return this.prefix
-	}
-
-	/*
-	 * Get ttl property
-	 */
-	public getTtl(): number {
-		return this.ttl
-	}
-
-	/*
-	 * Convert id to string and concat configured prefix
-	 */
-	public parseKey(id: string | number): string {
-		let key = id.toString()
-
-		if (this.prefix) {
-			key = `${this.prefix}:${id.toString()}`
-		}
-
-		return key
-	}
-}
-
-interface CacheOptions {
-	client?: Client
-	bucket?: number
-	prefix?: string
-	ttl?: number
 }

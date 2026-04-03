@@ -13,6 +13,18 @@ All notable changes to this project will be documented in this file.
 - tsx for development (watch mode) and tsc + tsc-alias for production builds
 - prisma:generate, prisma:migrate, prisma:studio npm scripts
 
+### Added (Tier 3B — Cache + Email)
+- ioredis cache client replacing redis v3 + es6-promisify — Valkey 8 compatible
+- CacheClient with lazy connect, event logging via Pino child logger
+- `remember<T>(key, ttl, factory)` cache-aside pattern — miss calls factory, caches result, never caches errors
+- CACHE_HOST, CACHE_PORT, CACHE_DB, CACHE_PASSWORD env vars (renamed from REDIS_CACHE_*)
+- Nodemailer mail service with React Email template rendering
+- MailService with SMTP transport, template-to-HTML via @react-email/render, plain text fallback
+- Welcome email template (React component)
+- MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_NAME, MAIL_FROM_ADDRESS, MAIL_SECURE env vars
+- Mail config, mail facade, mail shutdown wired into app lifecycle
+- 10 new tests (CacheClient, remember pattern, MailService)
+
 ### Added (Tier 3A — Infrastructure Services)
 - Pino structured logging replacing Winston — singleton root logger, child loggers per module, env-driven log level
 - LogService with destination-based transport wiring (console + file, extensible for cloud)
@@ -48,12 +60,25 @@ All notable changes to this project will be documented in this file.
 - express.json() replaces body-parser
 - Null-safety improvements across session middleware and auth handlers
 
+### Changed (Tier 3B)
+- Cache module rewritten from redis v3 callbacks + es6-promisify to ioredis async/await
+- DefaultCache updated for ioredis API — direct client access, db selection via select()
+- ContentCache and UserCache simplified — no longer pass global client through constructor
+- Cache config simplified from driver/store pattern to flat CacheConnectionOptions
+- tsconfig.json updated with `"jsx": "react-jsx"` for React Email templates
+
 ### Changed (Tier 3A)
 - All log call sites migrated from string concatenation to Pino structured format
 - Cache Client debug logging updated from Winston Logger to Pino child logger
 
+### Removed (Tier 3B)
+- redis v3 client library (replaced by ioredis)
+- es6-promisify (ioredis is natively async)
+- @types/redis, @types/es6-promisify dev dependencies
+- Old Client.ts redis wrapper class
+- REDIS_CACHE_DEFAULT, REDIS_CACHE_HOST, REDIS_CACHE_PORT, REDIS_CACHE_DB_DEFAULT env vars (renamed to CACHE_*)
+
 ### Removed
-- Winston logging library (replaced by Pino)
 - Babel (.babelrc, all @babel/* packages, babel-plugin-module-resolver)
 - TypeORM (typeorm, reflect-metadata, mysql2, decorators, migration file)
 - Mocha/Chai/NYC (.mocharc.json, all chai-* plugins, nyc config)

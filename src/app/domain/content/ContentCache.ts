@@ -1,62 +1,65 @@
-import { cache as GlobalCache, DefaultCache } from '~/lib/util'
+import { DefaultCache } from '~/lib/util'
 import { Content, ContentRepository } from './'
 
-export class ContentCache extends DefaultCache {
+export class ContentCache extends DefaultCache
+{
 	/*
 	 * Cache storage key prefix
 	 */
 	protected prefix = 'content'
 
 	/*
-	 * The _client storage bucket this should act upon
+	 * Valkey database number
 	 */
-	protected bucket = 3
+	protected db = 3
 
 	/*
 	 * Constructor
 	 */
-	constructor() {
-		// Always use global cache client
-		super({ client: GlobalCache.client() })
+	constructor()
+	{
+		super()
 	}
 
 	/*
 	 * Fetch model from cache. Optionally, cache a fresh copy if it doesn't exist
 	 */
-	public async fetch(id: string, cache = true): Promise<Content | undefined> {
+	public async fetch(id: string, shouldCache = true): Promise<Content | undefined>
+	{
 		// Find in cache
 		const data = await this.getRaw(id)
 
 		// Found?
-		if(data) {
+		if(data)
+		{
 			return JSON.parse(data)
 		}
 
 		// Cache it now?
-		if(cache) {
-			// Find fresh source
-			const source = await this.getSource(id)
+		if( ! shouldCache) { return undefined }
 
-			// Found?
-			if(source) {
-				// Add to cache
-				await this.save(source)
+		// Find fresh source
+		const source = await this.getSource(id)
 
-				// Return
-				return JSON.parse(JSON.stringify(source))
-			}
-		}
+		// Not found?
+		if( ! source) { return undefined }
+
+		// Add to cache
+		await this.save(source)
+
+		return JSON.parse(JSON.stringify(source))
 	}
 
 	/*
 	 * Save model in cache by given id
 	 */
-	public async saveById(id: string): Promise<boolean> {
+	public async saveById(id: string): Promise<boolean>
+	{
 		// Fresh data
 		const content = await this.getSource(id)
 
 		// Not found?
-		if( ! content) return false
+		if( ! content) { return false }
 
 		// Cache
 		return await this.set(content.id, JSON.stringify(content))
@@ -65,19 +68,19 @@ export class ContentCache extends DefaultCache {
 	/*
 	 * Save given Content in cache
 	 */
-	public async save(data: Content, refresh = false): Promise<boolean> {
+	public async save(data: Content, refresh = false): Promise<boolean>
+	{
 		// Init
 		let content: Content = data
 
 		// Refresh?
-		if(refresh) {
+		if(refresh)
+		{
 			const source = await this.getSource(data.id.toString())
 
-			if(source) {
-				content = source
-			} else {
-				return false
-			}
+			if( ! source) { return false }
+
+			content = source
 		}
 
 		// Cache
@@ -87,7 +90,8 @@ export class ContentCache extends DefaultCache {
 	/*
 	 * Get fresh model data from source
 	 */
-	public async getSource(id: string): Promise<Content | undefined> {
+	public async getSource(id: string): Promise<Content | undefined>
+	{
 		// Init repo
 		const repository = new ContentRepository()
 

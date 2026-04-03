@@ -1,35 +1,14 @@
 import { env } from '~/lib/util'
+import type { CacheConnectionOptions } from '~/lib/util/cache'
 
-export const cache: CacheConfig = {
-	default: env.REDIS_CACHE_DEFAULT as Driver,
-	get driver() {
-		return this.store[this.default]
-	},
-	store: {
-		redis: {
-			host: env.REDIS_CACHE_HOST,
-			port: env.REDIS_CACHE_PORT,
-			db: env.REDIS_CACHE_DB_DEFAULT
-		}
-	}
-}
-
-export interface CacheConfig {
-	default: Driver
-	driver: DriverConfig
-	store: Stores
-}
-
-interface Stores {
-	[key: string]: DriverConfig
-}
-
-type Driver = 'redis'
-
-type DriverConfig = RedisConfig
-
-interface RedisConfig {
-	host: string
-	port: number
-	db: number
+/*
+ * Cache Config
+ *
+ * Connection options for Valkey/Redis via ioredis.
+ */
+export const cache: CacheConnectionOptions = {
+	host: env.CACHE_HOST,
+	port: env.CACHE_PORT,
+	db: env.CACHE_DB,
+	password: env.CACHE_PASSWORD,
 }

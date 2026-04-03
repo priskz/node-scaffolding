@@ -37,10 +37,19 @@ const envSchema = z.object({
 	LOG_FILE_PATH: z.string().optional(),
 
 	// Cache
-	REDIS_CACHE_DEFAULT: z.string().default('redis'),
-	REDIS_CACHE_HOST: z.string().default('localhost'),
-	REDIS_CACHE_PORT: z.coerce.number().default(6379),
-	REDIS_CACHE_DB_DEFAULT: z.coerce.number().default(0),
+	CACHE_HOST: z.string().default('localhost'),
+	CACHE_PORT: z.coerce.number().default(6379),
+	CACHE_DB: z.coerce.number().default(0),
+	CACHE_PASSWORD: z.string().optional(),
+
+	// Mail
+	MAIL_HOST: z.string().default('localhost'),
+	MAIL_PORT: z.coerce.number().default(1025),
+	MAIL_USERNAME: z.string().optional(),
+	MAIL_PASSWORD: z.string().optional(),
+	MAIL_FROM_NAME: z.string().default('Rhizome'),
+	MAIL_FROM_ADDRESS: z.string().default('noreply@rhizome.dev'),
+	MAIL_SECURE: z.string().default('false'),
 
 	// Storage
 	STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),

@@ -1,3 +1,5 @@
 export * from './cache'
+export * from './cache-client'
 export * from './DefaultCache'
-export * from './Client'
+export * from './remember'
+export * from './types'
