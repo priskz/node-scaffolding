@@ -6,7 +6,7 @@ import helmet from 'helmet'
 import { config } from '~/config'
 import { global, exception, rateLimiter, requestLogger, passportInit } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, env, event, log, mail, oauth, schedule, socket, webhook } from '~/lib/util'
+import { bullBoard, cache, database, env, event, job, log, mail, oauth, socket, versioning, webhook } from '~/lib/util'
 
 /*
  * Instantiate App Framework
@@ -21,21 +21,26 @@ async function run(): Promise<Express>
 	// Init logging
 	log.init()
 
-	// Schedule Enabled?
-	if(config.schedule.enable)
-	{
-		// Init schedule
-		schedule.config(config.schedule.jobs)
-
-		// Start schedule
-		await schedule.start()
-	}
-
 	// Connect database
 	await database.connect()
 
 	// Connect cache
 	await cache.connect(config.cache)
+
+	// Init job service
+	if(config.job.enabled)
+	{
+		job.init({ host: env.CACHE_HOST, port: env.CACHE_PORT })
+
+		// Register job definitions
+		for(const definition of config.job.jobs)
+		{
+			job.define(definition)
+		}
+
+		// Start all jobs
+		await job.start()
+	}
 
 	// Request logging + requestId context
 	instance.use(requestLogger)
@@ -80,8 +85,19 @@ async function run(): Promise<Express>
 	// Global app middleware
 	instance.use(global)
 
-	// Configure route handlers
-	instance.use(`${config.api.prefix}${config.api.version}`, router)
+	// Register API versions
+	versioning.register({ version: config.api.version, router })
+	versioning.setCurrent(config.api.version)
+
+	// Mount versioned routes
+	versioning.mount(instance, config.api.prefix)
+
+	// Bull Board dashboard
+	if(config.job.enabled && config.job.boardEnabled)
+	{
+		const adapter = bullBoard.createAdapter(job.getQueues(), config.job.boardPath)
+		instance.use(config.job.boardPath, adapter.getRouter())
+	}
 
 	// Add exception handler (should be last use)
 	instance.use(exception)
@@ -112,12 +128,12 @@ async function shutdown(): Promise<void>
 {
 	webhook.dispatcher.close()
 	await webhook.close()
+	await job.close()
 	await socket.close()
 	event.close()
 	await database.disconnect()
 	await cache.disconnect()
 	mail.close()
-	await schedule.stop()
 }
 
 // Export App

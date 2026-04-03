@@ -94,6 +94,11 @@ const envSchema = z.object({
 	TOTP_ENABLED: z.string().default('false'),
 	TOTP_ISSUER: z.string().default('Rhizome'),
 	RECOVERY_CODE_COUNT: z.coerce.number().default(10),
+
+	// Jobs (BullMQ)
+	JOB_ENABLED: z.string().default('false'),
+	JOB_BOARD_ENABLED: z.string().default('false'),
+	JOB_BOARD_PATH: z.string().default('/admin/queues'),
 })
 
 /*

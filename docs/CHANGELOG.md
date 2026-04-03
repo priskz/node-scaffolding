@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added (Tier 6 — Developer Experience)
+- API versioning service (`src/lib/util/versioning/`) — register multiple API versions, version-aware route mounting, deprecation headers (Deprecation, Sunset, Link successor-version)
+- BullMQ job service (`src/lib/util/job/`) — generic job infrastructure replacing node-schedule, define/start/dispatch/list/close lifecycle, repeat job scheduling via upsertJobScheduler
+- Bull Board dashboard (`@bull-board/express`) — mounted at configurable path (JOB_BOARD_PATH), visual queue monitoring
+- Sample job definition — log-memory-usage repeat job (every minute) replacing old LogMemoryUsage AbstractTask
+- Prisma seed system — `prisma/seed.ts` with structured seeders (role-seeder, user-seeder), idempotent via upsert, wired to `npx prisma db seed`
+- Docker Compose modernized — PostgreSQL 16, Valkey 8, Mailpit, Adminer (full profile), replacing MySQL 5 + Redis + Elasticsearch + Kibana
+- JOB_ENABLED, JOB_BOARD_ENABLED, JOB_BOARD_PATH env vars
+- Job config (`src/config/job.ts`) with job definitions array
+- 20 new tests (versioning 8, job service 12) — 228 total
+
+### Changed (Tier 6)
+- app.ts — schedule system replaced with job service, Bull Board dashboard mounted conditionally, versioning.mount() replaces hardcoded route prefix
+- Admin schedule API handlers rewired from old Scheduler to new job service
+- Route mounting uses versioning service instead of string concatenation
+
+### Removed (Tier 6)
+- node-schedule dependency and @types/node-schedule
+- Entire `src/lib/util/schedule/` module (Scheduler, AbstractTask, AbstractTaskGroup, AnonTask, LogMemoryUsage, SchedulableInterface)
+- `src/config/schedule.ts` — replaced by `src/config/job.ts`
+
 ### Added (Tier 5B — Auth Features: OAuth + 2FA)
 - OAuth service (`src/lib/util/oauth/`) — Passport.js wrapper with Google and GitHub strategy registration, find-or-create user flow, account linking/unlinking, linked provider listing
 - OAuth middleware — Passport initialize, oauthCallback handler (finds/creates user, issues JWT tokens), oauthInitiate factory for consent screen redirect

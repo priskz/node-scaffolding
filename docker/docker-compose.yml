@@ -1,63 +1,111 @@
-version: '3.8'
+# node-scaffolding — Local Development Infrastructure
+# Usage:
+#   docker compose up                        # default: db, cache, mail
+#   docker compose --profile full up         # + adminer
+#
+# Copy .env.example to .env to override defaults.
+
+name: node-scaffolding
 
 services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
   db:
-    container_name: database
-    image: mysql:5
-    restart: always
+    image: postgres:16-alpine
     environment:
-      MYSQL_USER: 'local'
-      MYSQL_PASSWORD: 'local'
-      MYSQL_ROOT_PASSWORD: 'local'
+      POSTGRES_USER: ${POSTGRES_USER:-local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local}
+      POSTGRES_DB: ${POSTGRES_DB:-scaffolding}
     ports:
-      - '3306:3306'
-    expose:
-      - '3306'
+      - "${DB_PORT:-2640}:5432"
     volumes:
-      - my-db:/var/lib/mysql
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-local}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
-  redis:
-    container_name: cache
-    image: redis
-    restart: always
-    ports:
-      - '6379:6379'
+  # Alternative: MySQL 8 — swap the db block above for this
+  # db:
+  #   image: mysql:8
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local}
+  #     MYSQL_DATABASE: ${POSTGRES_DB:-scaffolding}
+  #     MYSQL_USER: ${POSTGRES_USER:-local}
+  #     MYSQL_PASSWORD: ${POSTGRES_PASSWORD:-local}
+  #   ports:
+  #     - "${DB_PORT:-2640}:3306"
+  #   volumes:
+  #     - db-data:/var/lib/mysql
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - app-network
 
-  # Elasticsearch Docker Images: https://www.docker.elastic.co/
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
-    restart: always
-    container_name: elasticsearch
-    environment:
-      - xpack.security.enabled=false
-      - discovery.type=single-node
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    cap_add:
-      - IPC_LOCK
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
+  # ---------------------------------------------------------------------------
+  # Valkey 8 (Redis-compatible)
+  # ---------------------------------------------------------------------------
+  cache:
+    image: valkey/valkey:8-alpine
     ports:
-      - 9200:9200
-      - 9300:9300
+      - "${CACHE_PORT:-2650}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
-  kibana:
-    container_name: kibana
-    image: docker.elastic.co/kibana/kibana:7.4.2
-    restart: always
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  # Alternative: Redis 7 — swap the cache block above for this
+  # cache:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "${CACHE_PORT:-2650}:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - app-network
+
+  # ---------------------------------------------------------------------------
+  # Mailpit — local email capture
+  # ---------------------------------------------------------------------------
+  mail:
+    image: axllent/mailpit
     ports:
-      - 5601:5601
+      - "${MAIL_UI_PORT:-2660}:8025"
+      - "${MAIL_SMTP_PORT:-2661}:1025"
+    networks:
+      - app-network
+
+  # ---------------------------------------------------------------------------
+  # Adminer — database UI (full profile)
+  # ---------------------------------------------------------------------------
+  adminer:
+    profiles: ["full"]
+    image: adminer
+    ports:
+      - "${ADMINER_PORT:-2670}:8080"
     depends_on:
-      - elasticsearch
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
 
 volumes:
-  my-db:
-  elasticsearch-data:
-    driver: local
+  db-data:
+
+networks:
+  app-network:
+    driver: bridge
