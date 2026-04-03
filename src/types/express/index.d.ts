@@ -12,6 +12,7 @@ declare module 'express-serve-static-core' {
 		getUser: () => User
 		jwtPayload?: TokenPayload
 		apiKeyPermissions?: string[]
+		twoFactorVerified?: boolean
 		tenantId?: string
 		tenant?: TenantRecord
 	}

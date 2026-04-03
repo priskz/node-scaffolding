@@ -79,6 +79,21 @@ const envSchema = z.object({
 	WEBHOOK_QUEUE_ENABLED: z.string().default('false'),
 	WEBHOOK_MAX_RETRIES: z.coerce.number().default(5),
 	WEBHOOK_RETRY_DELAY: z.coerce.number().default(5000),
+
+	// OAuth
+	OAUTH_GOOGLE_ENABLED: z.string().default('false'),
+	OAUTH_GOOGLE_CLIENT_ID: z.string().optional(),
+	OAUTH_GOOGLE_CLIENT_SECRET: z.string().optional(),
+	OAUTH_GOOGLE_CALLBACK_URL: z.string().default('/auth/google/callback'),
+	OAUTH_GITHUB_ENABLED: z.string().default('false'),
+	OAUTH_GITHUB_CLIENT_ID: z.string().optional(),
+	OAUTH_GITHUB_CLIENT_SECRET: z.string().optional(),
+	OAUTH_GITHUB_CALLBACK_URL: z.string().default('/auth/github/callback'),
+
+	// TOTP / 2FA
+	TOTP_ENABLED: z.string().default('false'),
+	TOTP_ISSUER: z.string().default('Rhizome'),
+	RECOVERY_CODE_COUNT: z.coerce.number().default(10),
 })
 
 /*

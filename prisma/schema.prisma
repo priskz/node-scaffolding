@@ -19,9 +19,14 @@ model User {
   updatedAt DateTime? @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  sessions Session[]
-  roles    UserRole[]
-  apiKeys  ApiKey[]
+  totpSecret    String?   @map("totp_secret")
+  totpEnabled   Boolean   @default(false) @map("totp_enabled")
+  recoveryCodes String[]  @map("recovery_codes")
+
+  sessions      Session[]
+  roles         UserRole[]
+  apiKeys       ApiKey[]
+  oauthAccounts OAuthAccount[]
 
   @@map("user")
 }
@@ -231,4 +236,22 @@ model ApiKey {
   @@index([userId])
   @@index([active])
   @@map("api_key")
+}
+
+model OAuthAccount {
+  id           String    @id @default(uuid())
+  provider     String
+  providerId   String    @map("provider_id")
+  userId       Int       @map("user_id")
+  accessToken  String?   @map("access_token")
+  refreshToken String?   @map("refresh_token")
+  profile      Json?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime? @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("oauth_account")
 }

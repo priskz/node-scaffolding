@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added (Tier 5B — Auth Features: OAuth + 2FA)
+- OAuth service (`src/lib/util/oauth/`) — Passport.js wrapper with Google and GitHub strategy registration, find-or-create user flow, account linking/unlinking, linked provider listing
+- OAuth middleware — Passport initialize, oauthCallback handler (finds/creates user, issues JWT tokens), oauthInitiate factory for consent screen redirect
+- OAuth config (`src/config/oauth.ts`) — per-provider enable/disable with env credentials (OAUTH_GOOGLE_*, OAUTH_GITHUB_*)
+- OAuthAccount Prisma model (provider, providerId, userId, accessToken, refreshToken, profile as Json) with unique constraint on provider+providerId
+- 2FA TOTP service (`src/lib/util/totp/`) — otplib v13 secret generation, QR URI, verify token, enable/disable TOTP, recovery code generation (SHA-256 hashed), single-use recovery code consumption
+- require2FA middleware guard — checks if user has TOTP enabled and req.twoFactorVerified is set, passes through for users without 2FA
+- User model extended with totpSecret, totpEnabled, recoveryCodes fields
+- Express Request type extended with twoFactorVerified
+- TOTP config (`src/config/totp.ts`) — TOTP_ENABLED, TOTP_ISSUER, RECOVERY_CODE_COUNT env vars
+- Passport initialized in app.ts with conditional strategy registration
+- Prisma migration for OAuthAccount model and User TOTP fields
+- 37 new tests (208 total)
+
 ### Added (Tier 5A — Auth Features: RBAC + API Keys)
 - RBAC service (`src/lib/util/rbac/`) — getUserPermissions, hasPermission, hasRole, hasAnyPermission, hasAllPermissions with Valkey cache via remember() pattern (5-minute TTL)
 - clearPermissionCache for cache invalidation when roles change

@@ -4,9 +4,9 @@ import cors from 'cors'
 import express, { Express } from 'express'
 import helmet from 'helmet'
 import { config } from '~/config'
-import { global, exception, rateLimiter, requestLogger } from '~/app/middleware'
+import { global, exception, rateLimiter, requestLogger, passportInit } from '~/app/middleware'
 import { router } from '~/app/routes'
-import { cache, database, env, event, log, mail, schedule, socket, webhook } from '~/lib/util'
+import { cache, database, env, event, log, mail, oauth, schedule, socket, webhook } from '~/lib/util'
 
 /*
  * Instantiate App Framework
@@ -59,6 +59,20 @@ async function run(): Promise<Express>
 
 	// Parse cookies attached to requests
 	instance.use(cookieParser(env.COOKIE_SECRET))
+
+	// Passport OAuth
+	instance.use(passportInit)
+
+	// Register OAuth strategies
+	if(config.oauth.google.enabled)
+	{
+		oauth.registerGoogle(config.oauth.google)
+	}
+
+	if(config.oauth.github.enabled)
+	{
+		oauth.registerGitHub(config.oauth.github)
+	}
 
 	// Rate limiting
 	instance.use(rateLimiter)
