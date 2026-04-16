@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added (Test Coverage Restoration — 2026-04-15)
+- Unit specs for the app-layer modules that survived Tier 1 modernization but lost their mocha specs in the toolchain swap
+- Domain layer — UserRepository, UserCache, SessionRepository, ContentRepository, ContentCache, ContentSearch (6 files, 35 tests)
+- Service/data layer — UserService, SessionService, ContentService (3 files, 13 tests)
+- Service/root layer — AuthRoot, SessionRoot (2 files, 12 tests)
+- Legacy middleware — exception, global, session (3 files, 17 tests)
+- API controllers — auth (login/logout/register), aux (error/info/ping), session/get, search (get/refresh/update), admin/schedule (job/stack/start/stop) (14 files, 32 tests)
+- All specs vitest + `vi.mock` style — no database, cache, or Elasticsearch dependency
+- 109 new tests across 28 files — total 337 tests across 62 spec files (up from 228/34)
+
+### Skipped — Deferred to follow-up session
+- Lib-layer restoration (DefaultCache, time, respond, route, DefaultSearch, SearchClient, crypt, lib/service/DataService) — mocked out in app-layer specs, not blocking
+
+### Skipped — Obsolete
+- TypeORMRepository, Logger, log, cache/Client, schedule/* — underlying code removed in modernization, concerns covered by Tier-era specs
+
 ### Added (Tier 6 — Developer Experience)
 - API versioning service (`src/lib/util/versioning/`) — register multiple API versions, version-aware route mounting, deprecation headers (Deprecation, Sunset, Link successor-version)
 - BullMQ job service (`src/lib/util/job/`) — generic job infrastructure replacing node-schedule, define/start/dispatch/list/close lifecycle, repeat job scheduling via upsertJobScheduler
