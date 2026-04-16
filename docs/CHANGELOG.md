@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Added (Test Coverage Restoration — 2026-04-15)
+### Added (Lib-Layer Test Coverage Restoration — 2026-04-15)
+- Unit specs for the 11 lib-layer modules that survived Tier 1 but lost their mocha specs and were deferred from the app-layer port
+- Simple utilities — crypt (bcrypt hash/check round-trip), time (luxon DateTime facade: now/local/format/stamp/iso/parse and their Local variants)
+- Express helpers — Responder (success/error/exception/redirect, 200→204 flip, permanent-redirect, after-middleware hook), respond factory, route.register (single/array/base-prefix/middleware/after-middleware branches)
+- Cache — DefaultCache (set/get/getRaw/remove/keys/flush/parseKey with db-selection, TTL, JSON failure branches) and cache facade (connect/disconnect/client delegation)
+- Search — SearchClient (count/exists/ping/search hit remap/add with missing-index guard/refresh/update noop branch/deleteIndex/static createIndex) via a mocked @elastic/elasticsearch Client, DefaultSearch delegation, search init-once facade
+- DataService base class — all 11 delegating methods (get/getWithCount/paginate/cursorPaginate/getOne/create/update/delete/restore/forceDelete)
+- 99 new tests across 11 files — total 436 tests across 73 spec files (up from 337/62)
+- Stage 1 test coverage gap fully closed — every architectural layer now has unit tests
+
+### Added (App-Layer Test Coverage Restoration — 2026-04-15)
 - Unit specs for the app-layer modules that survived Tier 1 modernization but lost their mocha specs in the toolchain swap
 - Domain layer — UserRepository, UserCache, SessionRepository, ContentRepository, ContentCache, ContentSearch (6 files, 35 tests)
 - Service/data layer — UserService, SessionService, ContentService (3 files, 13 tests)
@@ -13,9 +23,6 @@ All notable changes to this project will be documented in this file.
 - API controllers — auth (login/logout/register), aux (error/info/ping), session/get, search (get/refresh/update), admin/schedule (job/stack/start/stop) (14 files, 32 tests)
 - All specs vitest + `vi.mock` style — no database, cache, or Elasticsearch dependency
 - 109 new tests across 28 files — total 337 tests across 62 spec files (up from 228/34)
-
-### Skipped — Deferred to follow-up session
-- Lib-layer restoration (DefaultCache, time, respond, route, DefaultSearch, SearchClient, crypt, lib/service/DataService) — mocked out in app-layer specs, not blocking
 
 ### Skipped — Obsolete
 - TypeORMRepository, Logger, log, cache/Client, schedule/* — underlying code removed in modernization, concerns covered by Tier-era specs
