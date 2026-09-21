@@ -43,7 +43,12 @@ function currentId(): string | undefined
 /*
  * Require the current tenant — throws if not in a tenant context
  */
-function require(): TenantRecord
+// NOT `require`. TypeScript reserves that name in a module's top-level scope
+// (TS2441), so the emit build failed on it while `type-check` and the whole
+// vitest suite passed — the error only surfaces under `tsc` with emit.
+// The PUBLIC name is unchanged: the object literal below still exposes
+// `tenantContext.require`, so no caller moves.
+function requireTenant(): TenantRecord
 {
 	const tenant = current()
 
@@ -70,4 +75,4 @@ function requireId(): string
 	return id
 }
 
-export const tenantContext = { run, current, currentId, require, requireId }
+export const tenantContext = { run, current, currentId, require: requireTenant, requireId }
