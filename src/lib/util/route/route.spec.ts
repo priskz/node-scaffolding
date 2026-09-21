@@ -1,192 +1,91 @@
-import { expect } from 'chai'
-import { Router } from 'express'
-import { route, RouteConfig } from './'
+import { describe, it, expect, vi } from 'vitest'
+import { route, RouteConfig } from './route'
+import type { Router, RequestHandler } from 'express'
 
-//----- Tests -----//
+function mockRouter()
+{
+	const endpoint = {
+		get: vi.fn().mockReturnThis(),
+		post: vi.fn().mockReturnThis(),
+		put: vi.fn().mockReturnThis(),
+		delete: vi.fn().mockReturnThis(),
+	}
+	const router = {
+		route: vi.fn(() => endpoint),
+		__endpoint: endpoint,
+	}
+	return router as unknown as Router & { __endpoint: typeof endpoint }
+}
 
-describe('util/route', () => {
-	describe('when register is given individual RouteConfig', () => {
-		// Init router
-		const router = Router()
+describe('lib/util/route/register', () =>
+{
+	it('should register a single GET route with no middleware', () =>
+	{
+		const router = mockRouter()
+		const handler: RequestHandler = (_req, _res, _next) => {}
+		const config: RouteConfig = { method: 'get', path: '/ping', handler }
 
-		// Individual route
-		const mockRouteConfig: RouteConfig = {
-			path: '/test-route',
-			method: 'get',
-			handler: () => {}
-		}
+		route.register(router, config)
 
-		// Test
-		route.register(router, mockRouteConfig)
-
-		// Assertions
-		it('should add route to the stack', async () => {
-			expect(router.stack[0].route.path).to.equal(mockRouteConfig.path)
-		})
-
-		it('should make handler async', async () => {
-			expect(router.stack[0].route.stack[0].handle.toString()).to.contain(
-				'asyncUtilWrap'
-			)
-		})
+		expect(router.route).toHaveBeenCalledWith('/ping')
+		expect((router as unknown as { __endpoint: { get: ReturnType<typeof vi.fn> } }).__endpoint.get)
+			.toHaveBeenCalled()
 	})
 
-	describe('when register is given an an array of RouteConfigs', () => {
-		it('should add all routes to the stack', async () => {
-			// Init router
-			const router = Router()
+	it('should register an array of routes', () =>
+	{
+		const router = mockRouter()
+		const handler: RequestHandler = (_req, _res, _next) => {}
+		const routes: RouteConfig[] = [
+			{ method: 'get', path: '/a', handler },
+			{ method: 'post', path: '/b', handler },
+		]
 
-			// Several routes
-			const mockRouteConfig: RouteConfig[] = [
-				{
-					path: '/test-route-1',
-					method: 'get',
-					handler: () => {}
-				},
-				{
-					path: '/test-route-2',
-					method: 'get',
-					handler: () => {}
-				}
-			]
+		route.register(router, routes)
 
-			// Test
-			route.register(router, mockRouteConfig)
-
-			// Assertions
-			expect(router.stack[0].route.path).to.equal(mockRouteConfig[0].path)
-			expect(router.stack[1].route.path).to.equal(mockRouteConfig[1].path)
-		})
+		expect(router.route).toHaveBeenCalledWith('/a')
+		expect(router.route).toHaveBeenCalledWith('/b')
 	})
 
-	describe('when register is given a single middleware', () => {
-		// Init router
-		const router = Router()
+	it('should prefix each path with the base argument', () =>
+	{
+		const router = mockRouter()
+		const handler: RequestHandler = (_req, _res, _next) => {}
 
-		// Create route with middleare
-		const mockRouteConfig: RouteConfig = {
-			path: '/test-route-1',
-			method: 'get',
-			handler: () => {},
-			middleware: () => {}
-		}
+		route.register(router, { method: 'get', path: '/users', handler }, '/api')
 
-		// Test
-		route.register(router, mockRouteConfig)
-
-		// Assertions
-		it('should add one layer to the route stack', async () => {
-			// Assertions
-			expect(router.stack[0].route.stack.length).to.equal(2)
-		})
-
-		it('should make middleware async', async () => {
-			expect(router.stack[0].route.stack[1].handle.toString()).to.contain(
-				'asyncUtilWrap'
-			)
-		})
+		expect(router.route).toHaveBeenCalledWith('/api/users')
 	})
 
-	describe('when register is given two (optional) middleware', () => {
-		// Init router
-		const router = Router()
+	it('should accept an array of middleware and register them', () =>
+	{
+		const router = mockRouter()
+		const handler: RequestHandler = (_req, _res, _next) => {}
+		const mw1: RequestHandler = (_req, _res, next) => { next() }
+		const mw2: RequestHandler = (_req, _res, next) => { next() }
 
-		// Create route with middleare
-		const mockRouteConfig: RouteConfig = {
-			path: '/test-route-1',
-			method: 'get',
-			handler: () => {},
-			middleware: [() => {}, () => {}]
-		}
+		route.register(router, { method: 'get', path: '/x', handler, middleware: [mw1, mw2] })
 
-		// Test
-		route.register(router, mockRouteConfig)
-
-		// Assertions
-		it('should add two layers to the route stack', async () => {
-			// Assertions
-			expect(router.stack[0].route.stack.length).to.equal(
-				mockRouteConfig.middleware!.length + 1
-			)
-		})
-
-		it('should make middleware async', async () => {
-			expect(router.stack[0].route.stack[1].handle.toString()).to.contain(
-				'asyncUtilWrap'
-			)
-			expect(router.stack[0].route.stack[2].handle.toString()).to.contain(
-				'asyncUtilWrap'
-			)
-		})
+		const endpoint = (router as unknown as { __endpoint: { get: ReturnType<typeof vi.fn> } }).__endpoint
+		expect(endpoint.get).toHaveBeenCalled()
+		// Middleware array passed through — we just confirm 2 middleware were supplied.
+		const args = endpoint.get.mock.calls[0]
+		expect(Array.isArray(args[0])).toBe(true)
+		expect(args[0]).toHaveLength(2)
 	})
 
-	describe('when register is given two (optional) after (middleware)', () => {
-		it('should add two layers to the route stack', async () => {
-			// Init router
-			const router = Router()
+	it('should accept after-middleware as a third route.* argument', () =>
+	{
+		const router = mockRouter()
+		const handler: RequestHandler = (_req, _res, _next) => {}
+		const after: RequestHandler = (_req, _res, next) => { next() }
 
-			// Create route with after middleware
-			const mockRouteConfig: RouteConfig = {
-				path: '/test-route-1',
-				method: 'get',
-				handler: () => {},
-				after: [() => {}, () => {}]
-			}
+		route.register(router, { method: 'get', path: '/x', handler, after })
 
-			// Test
-			route.register(router, mockRouteConfig)
-
-			// Assertions
-			expect(router.stack[0].route.stack.length).to.equal(
-				mockRouteConfig.after!.length + 1
-			)
-		})
-	})
-
-	describe('when register is given two (optional) middleware && two (optional) after middleware', () => {
-		it('should add 4 layers to the route stack', async () => {
-			// Init router
-			const router = Router()
-
-			// Create route w/ middleware/after
-			const mockRouteConfig: RouteConfig = {
-				path: '/test-route-1',
-				method: 'get',
-				handler: () => {},
-				middleware: [() => {}, () => {}],
-				after: [() => {}, () => {}]
-			}
-
-			// Test
-			route.register(router, mockRouteConfig)
-
-			// Assertions
-			expect(router.stack[0].route.stack.length).to.equal(
-				mockRouteConfig.middleware!.length + mockRouteConfig.after!.length + 1
-			)
-		})
-	})
-
-	describe('when register is given optional sync route', () => {
-		it('should create the handler as standard function', async () => {
-			// Init router
-			const router = Router()
-
-			// Create sync route
-			const mockRouteConfig: RouteConfig = {
-				path: '/test-route-1',
-				method: 'get',
-				handler: () => {},
-				sync: true
-			}
-
-			// Test
-			route.register(router, mockRouteConfig)
-
-			// Test
-			expect(router.stack[0].route.stack[0].handle.toString()).to.contain(
-				'() => { }'
-			)
-		})
+		const endpoint = (router as unknown as { __endpoint: { get: ReturnType<typeof vi.fn> } }).__endpoint
+		const args = endpoint.get.mock.calls[0]
+		// args: [middleware, handler, after]
+		expect(Array.isArray(args[2])).toBe(true)
+		expect(args[2]).toHaveLength(1)
 	})
 })

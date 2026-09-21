@@ -1,52 +1,59 @@
-import { expect } from 'chai'
-import { MockUser } from '~/test/mocks'
-import { User } from '~/app/domain'
-import { UserService } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-describe('app/service/data/user/UserService', () => {
-	// Unit
-	let service: UserService
+const mockGetOne = vi.fn()
 
-	// Mock User
-	let mockUser: User
+vi.mock('~/lib/service/DataService', () => ({
+	DataService: class
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		protected repository: any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		constructor(repository: any) { this.repository = repository }
+		public getOne(query: unknown) { return mockGetOne(query) }
+	},
+}))
 
-	before(async () => {
-		// Clean up
-		mockUser = (await MockUser.create()) as User
+vi.mock('~/app/domain', () => ({
+	UserRepository: class {},
+}))
+
+import { UserService } from './UserService'
+
+describe('app/service/data/user/UserService', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await MockUser.destroy(mockUser.id)
+	it('should construct with a UserRepository', () =>
+	{
+		const service = new UserService()
+		expect(service).toBeInstanceOf(UserService)
 	})
 
-	describe('constructor method', () => {
-		it('should return new instance of UserService', async () => {
-			// Test
-			service = new UserService()
+	describe('getOneByEmail', () =>
+	{
+		it('should delegate to getOne filtered by email', async () =>
+		{
+			const user = { id: 1, email: 'user@example.com' }
+			mockGetOne.mockResolvedValue(user)
 
-			// Assertions
-			expect(service).to.be.an.instanceOf(UserService)
+			const service = new UserService()
+			const result = await service.getOneByEmail('user@example.com')
+
+			expect(result).toBe(user)
+			expect(mockGetOne).toHaveBeenCalledWith({ where: { email: 'user@example.com' } })
 		})
-	})
 
-	describe('getOneByEmail method', () => {
-		it('if found should return User', async () => {
-			// Test
-			const result = await service.getOneByEmail(mockUser.email)
+		it('should return undefined when no match', async () =>
+		{
+			mockGetOne.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(result)
-				.to.have.property('email')
-				.to.equal(mockUser.email)
-		})
+			const service = new UserService()
+			const result = await service.getOneByEmail('none@example.com')
 
-		it('if NOT found should return undefined', async () => {
-			// Test
-			const reuslt = await service.getOneByEmail('email@doesnotexist.com')
-
-			// Assertions
-			expect(reuslt).to.be.undefined
+			expect(result).toBeUndefined()
 		})
 	})
 })

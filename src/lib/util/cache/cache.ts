@@ -1,51 +1,41 @@
-import { Client, ClientOptions } from './'
+import { cacheClient } from './cache-client'
+import type { CacheConnectionOptions } from './types'
 
 /*
- * Global Client Instance
+ * Cache Facade
+ *
+ * Global connect/disconnect lifecycle.
+ * Delegates to cacheClient for the ioredis instance.
  */
-let instance: Client
 
 /*
- * Connect Client
+ * Connect to cache
  */
-async function connect(options: ClientOptions = {}): Promise<boolean> {
-	// Ensure previous client is disconnected
-	if (instance) {
-		await instance.disconnect()
-	}
+async function connect(options: CacheConnectionOptions = {}): Promise<boolean>
+{
+	// Init client
+	const client = cacheClient.connect(options)
 
-	// Create new client
-	instance = new Client(options)
+	// Establish connection
+	await client.connect()
 
-	// Return connected
-	return await instance.connected()
+	// Verify
+	return await cacheClient.connected()
 }
 
 /*
- * Disconnect Client
+ * Disconnect from cache
  */
-async function disconnect(): Promise<boolean> {
-	// Connected?
-	if (await instance.connected()) {
-		return await instance.disconnect()
-	}
-
-	// Already disconnected
-	return false
+async function disconnect(): Promise<void>
+{
+	await cacheClient.disconnect()
 }
 
 /*
- * Retrieve Client
- */
-function client(): Client {
-	return instance
-}
-
-/*
- * Export Util
+ * Export facade
  */
 export const cache = {
-	client,
 	connect,
-	disconnect
+	disconnect,
+	client: cacheClient.instance,
 }

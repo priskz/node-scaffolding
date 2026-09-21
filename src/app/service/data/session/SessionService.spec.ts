@@ -1,72 +1,87 @@
-import { expect } from 'chai'
-import { MockSession } from '~/test/mocks'
-import { Session } from '~/app/domain'
-import { SessionService } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-describe('app/service/data/session/SessionService', () => {
-	// Unit
-	let service: SessionService
+const { mockGetOne, mockRepoUpdate, mockTimeNow } = vi.hoisted(() => ({
+	mockGetOne: vi.fn(),
+	mockRepoUpdate: vi.fn(),
+	mockTimeNow: vi.fn(),
+}))
 
-	// Mock Session
-	let mockSession: Session
+vi.mock('~/lib/service/DataService', () => ({
+	DataService: class
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		protected repository: any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		constructor(repository: any)
+		{
+			this.repository = { update: mockRepoUpdate }
+		}
+		public getOne(query: unknown) { return mockGetOne(query) }
+	},
+}))
 
-	before(async () => {
-		// Clean up
-		mockSession = (await MockSession.create()) as Session
+vi.mock('~/lib/util', () => ({
+	time: { now: mockTimeNow },
+}))
+
+vi.mock('~/app/domain', () => ({
+	SessionRepository: class {},
+}))
+
+import { SessionService } from './SessionService'
+
+describe('app/service/data/session/SessionService', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await MockSession.destroy(mockSession.id)
+	it('should construct with a SessionRepository', () =>
+	{
+		const service = new SessionService()
+		expect(service).toBeInstanceOf(SessionService)
 	})
 
-	describe('constructor method', () => {
-		it('should return new instance of SessionService', async () => {
-			// Test
-			service = new SessionService()
+	describe('getOneById', () =>
+	{
+		it('should delegate to getOne filtered by id', async () =>
+		{
+			const session = { id: 'abc' }
+			mockGetOne.mockResolvedValue(session)
 
-			// Assertions
-			expect(service).to.be.an.instanceOf(SessionService)
+			const service = new SessionService()
+			const result = await service.getOneById('abc')
+
+			expect(result).toBe(session)
+			expect(mockGetOne).toHaveBeenCalledWith({ where: { id: 'abc' } })
 		})
 	})
 
-	describe('getOneById method', () => {
-		it('if found should return Session', async () => {
-			// Test
-			const result = await service.getOneById(mockSession.id)
+	describe('expire', () =>
+	{
+		it('should update expiresAt to now and return true on success', async () =>
+		{
+			const fixedDate = new Date('2026-01-01T00:00:00Z')
+			mockTimeNow.mockReturnValue({ toJSDate: () => fixedDate })
+			mockRepoUpdate.mockResolvedValue({ id: 'abc' })
 
-			// Assertions
-			expect(result)
-				.to.have.property('id')
-				.to.equal(mockSession.id)
+			const service = new SessionService()
+			const ok = await service.expire('abc')
+
+			expect(ok).toBe(true)
+			expect(mockRepoUpdate).toHaveBeenCalledWith({ id: 'abc', expiresAt: fixedDate })
 		})
 
-		it('if NOT found should return undefined', async () => {
-			// Test
-			const reuslt = await service.getOneById('id-does-not-exist-in-db')
+		it('should return false when update yields no result', async () =>
+		{
+			mockTimeNow.mockReturnValue({ toJSDate: () => new Date() })
+			mockRepoUpdate.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(reuslt).to.be.undefined
-		})
-	})
+			const service = new SessionService()
+			const ok = await service.expire('abc')
 
-	describe('expire method', () => {
-		it('should update Session expiresAt and return void', async () => {
-			// Current session
-			const beforeSession = (await service.getOneById(
-				mockSession.id
-			)) as Session
-
-			// Test1
-			const result1 = await service.expire(beforeSession.id)
-
-			// Test2
-			const result2 = (await service.getOneById(mockSession.id)) as Session
-
-			// Assertions
-			expect(result1).to.be.true
-			expect(result2.expiresAt).to.not.equal(beforeSession.expiresAt)
-			expect(result2.updatedAt).to.not.equal(beforeSession.updatedAt)
+			expect(ok).toBe(false)
 		})
 	})
 })

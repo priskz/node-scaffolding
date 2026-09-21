@@ -1,3 +1,4 @@
 export * from './log'
-export * from './Logger'
+export * from './log-service'
+export * from './request-context'
 export * from './types'

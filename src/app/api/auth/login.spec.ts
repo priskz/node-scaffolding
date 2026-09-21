@@ -1,188 +1,124 @@
-import { expect } from 'chai'
-import { AxiosResponse } from 'axios'
-import { appRequest } from '~/test/util'
-import { MockSession, MockUser } from '~/test/mocks'
-import { getSessionIdFromHeader } from '~/test/util'
-import { crypt } from '~/lib/util'
-import { Session } from '~/app/domain'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { mockLogin } = vi.hoisted(() => ({
+	mockLogin: vi.fn(),
+}))
 
-describe('api/auth/login', () => {
-	// Guest user data
-	let guestData = MockUser.guest()
+vi.mock('~/lib/util', () => ({
+	respond: (_req: unknown, res: { status: (n: number) => unknown; json: (d: unknown) => unknown }) => ({
+		success: (data?: unknown, code: number = 200) =>
+		{
+			res.status(code === 200 && data === undefined ? 204 : code)
+			res.json(data)
+		},
+		error: (data?: unknown, code: number = 400) =>
+		{
+			res.status(code)
+			res.json(data)
+		},
+	}),
+}))
 
-	before(async () => {
-		// Clean up
-		await MockUser.create({
-			...guestData,
-			password: await crypt.hash.make(guestData.password)
-		})
+vi.mock('~/config', () => ({
+	config: { session: { cookie: 'sid' } },
+}))
+
+vi.mock('~/app/service', () => ({
+	AuthRoot: class
+	{
+		public login(...args: unknown[]) { return mockLogin(...args) }
+	},
+}))
+
+import { login } from './login'
+import type { Request, Response } from 'express'
+
+function mockRes()
+{
+	return {
+		status: vi.fn().mockReturnThis(),
+		json: vi.fn().mockReturnThis(),
+		cookie: vi.fn().mockReturnThis(),
+	}
+}
+
+describe('app/api/auth/login', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await MockUser.destroyByEmail(guestData.email)
+	it('should reject when request already has a user', async () =>
+	{
+		const req = {
+			body: { email: 'a@b.com', pass: 'x' },
+			getUser: () => ({ id: 1 }),
+			getSession: () => ({ id: 'sid' }),
+			setSession: vi.fn(),
+		}
+		const res = mockRes()
+
+		await login(req as unknown as Request, res as unknown as Response)
+
+		expect(mockLogin).not.toHaveBeenCalled()
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 
-	describe('valid credentials && session cookie is provided', () => {
-		// Mock
-		let session: Session
+	it('should 400 on invalid input', async () =>
+	{
+		const req = {
+			body: { email: 'not-an-email', pass: '' },
+			getUser: () => undefined,
+			getSession: () => ({ id: 'sid' }),
+			setSession: vi.fn(),
+		}
+		const res = mockRes()
 
-		// Cookie
-		let cookie: string
+		await login(req as unknown as Request, res as unknown as Response)
 
-		before(async () => {
-			// Create
-			session = (await MockSession.create()) as Session
-
-			// Generate cookie
-			cookie = MockSession.getCookie(session.id)
-		})
-
-		after(async () => {
-			// Clean Up
-			await MockSession.destroy(session.id)
-		})
-
-		it('should return 204 No Content', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post(
-				'/auth/login',
-				{
-					email: guestData.email,
-					pass: guestData.password
-				},
-				{
-					headers: { cookie }
-				}
-			)
-
-			// Update cookie
-			cookie = result.headers['set-cookie'][0]
-
-			// Assertions
-			expect(result.status).to.equal(204)
-		})
-
-		it('already logged in cookie should return 400 Bad Request', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post(
-				'/auth/login',
-				{
-					email: guestData.email,
-					pass: guestData.password
-				},
-				{
-					headers: { cookie }
-				}
-			)
-
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
+		expect(mockLogin).not.toHaveBeenCalled()
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 
-	describe('valid credentials && NO cookie is provided', () => {
-		it('should return a new session cookie && status 204 No Content', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/login', {
-				email: guestData.email,
-				pass: guestData.password
-			})
+	it('should 401 when AuthRoot.login returns undefined', async () =>
+	{
+		mockLogin.mockResolvedValue(undefined)
 
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
+		const req = {
+			body: { email: 'a@b.com', pass: 'pw' },
+			getUser: () => undefined,
+			getSession: () => ({ id: 'sid' }),
+			setSession: vi.fn(),
+		}
+		const res = mockRes()
 
-			// Clean Up
-			MockSession.destroy(validSessionId)
+		await login(req as unknown as Request, res as unknown as Response)
 
-			// Assertions
-			expect(result.status).to.equal(204)
-		})
+		expect(res.status).toHaveBeenCalledWith(401)
 	})
 
-	describe('invalid login credentials are provided', () => {
-		it('should return 401 Unauthorized', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/login', {
-				email: guestData.email,
-				pass: 'invalidpass'
-			})
+	it('should set session cookie and respond 204 on success', async () =>
+	{
+		const updated = {
+			id: 'new-sid',
+			expiresAt: new Date('2030-01-01T00:00:00Z'),
+		}
+		mockLogin.mockResolvedValue(updated)
 
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
+		const setSession = vi.fn()
+		const req = {
+			body: { email: 'a@b.com', pass: 'pw' },
+			getUser: () => undefined,
+			getSession: () => ({ id: 'sid' }),
+			setSession,
+		}
+		const res = mockRes()
 
-			// Clean Up
-			MockSession.destroy(validSessionId)
+		await login(req as unknown as Request, res as unknown as Response)
 
-			// Assertions
-			expect(result.status).to.equal(401)
-		})
-	})
-
-	describe('email input is NOT a valid email', () => {
-		it('should return 401 Unauthorized', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/login', {
-				email: 'thisIsNotAnEmail',
-				pass: 'anypass'
-			})
-
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
-
-			// Clean Up
-			MockSession.destroy(validSessionId)
-
-			// Assertions
-			result.status.should.equal(401)
-		})
-	})
-
-	describe('email input is NOT provided', () => {
-		it('should return 401 Unauthorized', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/login', {
-				pass: 'anypass'
-			})
-
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
-
-			// Clean Up
-			MockSession.destroy(validSessionId)
-
-			// Assertions
-			expect(result.status).to.equal(401)
-		})
-	})
-
-	describe('password input is NOT provided', () => {
-		it('should return 401 Unauthorized', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/login', {
-				email: 'any-email@test.com'
-			})
-
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
-
-			// Clean Up
-			MockSession.destroy(validSessionId)
-
-			// Assertions
-			expect(result.status).to.equal(401)
-		})
+		expect(setSession).toHaveBeenCalledWith(updated)
+		expect(res.cookie).toHaveBeenCalledWith('sid', 'new-sid', expect.any(Object))
+		expect(res.status).toHaveBeenCalledWith(204)
 	})
 })

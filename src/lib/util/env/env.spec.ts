@@ -1,90 +1,29 @@
-import { expect } from 'chai'
-import { env } from './'
+import { describe, it, expect } from 'vitest'
+import { env } from './env'
 
-//----- Tests -----//
-
-describe('util/env', () => {
-	describe('when environment variable does not exist', () => {
-		it('should throw an error', async () => {
-			// Init
-			let result
-
-			// Test
-			try {
-				result = env('DOES_NOT_EXIST')
-			} catch (error) {
-				result = error.message
-			}
-
-			// Assertions
-			expect(result).to.equal('DOES_NOT_EXIST is not defined')
+describe('lib/util/env', () =>
+{
+	describe('validated env object', () =>
+	{
+		it('should export a typed env object', () =>
+		{
+			// Assert
+			expect(env).toBeDefined()
+			expect(typeof env).toBe('object')
 		})
-	})
 
-	describe('when environment variable does not exist but a fallback is given', () => {
-		it('should throw an error', async () => {
-			// Fallback value
-			const fallback = 'FALLBACK_VALUE'
-
-			// Test
-			const result = env('DOES_NOT_EXIST', fallback)
-
-			// Assertions
-			expect(result).to.equal(fallback)
+		it('should have NODE_ENV defaulted', () =>
+		{
+			// Assert — vitest sets NODE_ENV to 'test' or it defaults
+			expect(env.NODE_ENV).toBeDefined()
+			expect(['development', 'production', 'test']).toContain(env.NODE_ENV)
 		})
-	})
 
-	describe("when ENV has 'true' string value", () => {
-		it('should return boolean true', async () => {
-			// Test
-			const result = env('TEST_ENV_BOOL_TRUE')
-
-			// Assertions
-			expect(result).to.be.true
-		})
-	})
-
-	describe("when ENV has 'false' string value", () => {
-		it('should return boolean false', async () => {
-			// Test
-			const result = env('TEST_ENV_BOOL_FALSE')
-
-			// Assertions
-			expect(result).to.be.false
-		})
-	})
-
-	describe('when ENV has csv string value and casted as array', () => {
-		it('should return an array', async () => {
-			// Test
-			const result1 = env('TEST_ENV_ARRAY', [], '[]')
-			const result2 = env('TEST_ENV_ARRAY', [], 'array')
-
-			// Assertions
-			expect(Array.isArray(result1)).to.be.true
-			expect(Array.isArray(result2)).to.be.true
-		})
-	})
-
-	describe('when ENV has int value and casted as int', () => {
-		it('should return an array', async () => {
-			// Test
-			const result = env('TEST_ENV_INT', undefined, 'int')
-
-			// Assertions
-			expect(typeof result).to.equal('number')
-		})
-	})
-
-	describe('when ENV has boolean value and casted as bool', () => {
-		it('should return a boolean', async () => {
-			// Test
-			const result1 = env('TEST_ENV_BOOL_TRUE', undefined, 'bool')
-			const result2 = env('TEST_ENV_BOOL_FALSE', undefined, 'bool')
-
-			// Assertions
-			expect(result1).to.be.true
-			expect(result2).to.be.false
+		it('should have APP_PORT with a default', () =>
+		{
+			// Assert
+			expect(env.APP_PORT).toBeDefined()
+			expect(typeof env.APP_PORT).toBe('string')
 		})
 	})
 })

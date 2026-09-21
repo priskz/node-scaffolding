@@ -1,7 +1,14 @@
 import { Request, Response } from 'express'
-import { Validator } from 'node-input-validator'
+import { z } from 'zod'
 import { config } from '~/config'
 import { DefaultSearch, log, respond } from '~/lib/util'
+
+/*
+ * Param Schema
+ */
+const paramsSchema = z.object({
+	index: z.enum(['default'])
+})
 
 async function refreshDefaultSearchIndex(): Promise<boolean> {
 	// Retrieve configured index
@@ -10,7 +17,7 @@ async function refreshDefaultSearchIndex(): Promise<boolean> {
 	// Configured?
 	if (!index) {
 		// Log error
-		log.error('Default search index not properly configured')
+		log.error('Default search index not configured')
 
 		return false
 	}
@@ -23,14 +30,12 @@ async function refreshDefaultSearchIndex(): Promise<boolean> {
 }
 
 export async function refresh(req: Request, res: Response): Promise<void> {
-	// Prepare validation
-	const input = new Validator(req.params, {
-		index: 'required|in:default'
-	})
-
 	// Validate
-	if (!(await input.check())) {
-		// Erro
+	const input = paramsSchema.safeParse(req.params)
+
+	// Invalid?
+	if( ! input.success)
+	{
 		respond(req, res).error()
 		return
 	}
@@ -41,7 +46,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 	// Attempt to refresh the default index
 	try {
 		// Specific logic per index
-		switch (req.params.index) {
+		switch (input.data.index) {
 			case 'default':
 				refreshed = await refreshDefaultSearchIndex()
 				break
@@ -50,9 +55,9 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 				refreshed = false
 				break
 		}
-	} catch (e) {
+	} catch (e: unknown) {
 		// Log error
-		log.error(e)
+		log.error({ error: e instanceof Error ? e.message : String(e) }, 'Search index refresh failed')
 	} finally {
 		// Refreshed?
 		if (refreshed) {

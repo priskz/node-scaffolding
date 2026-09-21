@@ -1,63 +1,87 @@
-import { expect } from 'chai'
-import { AxiosResponse } from 'axios'
-import { appRequest } from '~/test/util'
-import { config } from '~/config'
-import { SearchClient } from '~/lib/util'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Data -----//
+const { mockRefresh } = vi.hoisted(() => ({ mockRefresh: vi.fn() }))
 
-// Test index name
-const index = 'search-refresh-api-test-index'
+vi.mock('~/lib/util', () => ({
+	log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	DefaultSearch: class
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		constructor(_opts?: any) {}
+		public refresh() { return mockRefresh() }
+	},
+	respond: (_req: unknown, res: { status: (n: number) => unknown; json: (d: unknown) => unknown }) => ({
+		success: (data?: unknown, code: number = 200) =>
+		{
+			res.status(code === 200 && data === undefined ? 204 : code)
+			res.json(data)
+		},
+		error: (data?: unknown, code: number = 400) =>
+		{
+			res.status(code)
+			res.json(data)
+		},
+		exception: (data?: unknown, code: number = 500) =>
+		{
+			res.status(code)
+			res.json(data)
+		},
+	}),
+}))
 
-// Search Client
-let client: SearchClient
+vi.mock('~/config', () => ({
+	config: { search: { index: { default: 'test-index' } } },
+}))
 
-// Store original config value
-const defaultSearchIndex = config.search.index.default
+import { refresh } from './refresh'
+import type { Request, Response } from 'express'
 
-//----- Tests -----//
+function mockRes()
+{
+	return {
+		status: vi.fn().mockReturnThis(),
+		json: vi.fn().mockReturnThis(),
+	}
+}
 
-describe('app/api/search/refresh', () => {
-	before(async function() {
-		// Change config value for tests
-		config.search.index.default = index
-
-		// Create client
-		client = new SearchClient(index)
-
-		// Create test index
-		await SearchClient.createIndex(index, {})
+describe('app/api/search/refresh', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async function() {
-		// Revert updated config value
-		config.search.index.default = defaultSearchIndex
+	it('should error on invalid params', async () =>
+	{
+		const req = { params: { index: 'bogus' } }
+		const res = mockRes()
 
-		// Clean up
-		await client.deleteIndex()
+		await refresh(req as unknown as Request, res as unknown as Response)
+
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 
-	describe('when valid domain and type params are given', () => {
-		it('should refresh search index and return 204', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post(
-				'/search/default/refresh'
-			)
+	it('should respond 204 when refresh succeeds', async () =>
+	{
+		mockRefresh.mockResolvedValue(true)
 
-			// Assertions
-			expect(result.status).to.equal(204)
-		})
+		const req = { params: { index: 'default' } }
+		const res = mockRes()
+
+		await refresh(req as unknown as Request, res as unknown as Response)
+
+		expect(res.status).toHaveBeenCalledWith(204)
 	})
 
-	describe('when invalid index is given', () => {
-		it('should return 400', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post(
-				'/search/INVALID/refresh'
-			)
+	it('should respond 500 when refresh fails', async () =>
+	{
+		mockRefresh.mockResolvedValue(false)
 
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
+		const req = { params: { index: 'default' } }
+		const res = mockRes()
+
+		await refresh(req as unknown as Request, res as unknown as Response)
+
+		expect(res.status).toHaveBeenCalledWith(500)
 	})
 })

@@ -1,206 +1,88 @@
-import { expect } from 'chai'
-import { seeds } from '~/test/seeds/content'
-import { Client as ElasticSearchClient } from '@elastic/elasticsearch'
-import { DefaultSearch, SearchClient } from './'
-import { Content } from '~/app/domain/content'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { mockRefresh, mockFind, mockUpdate, mockGetIndex, mockGetSource } = vi.hoisted(() => ({
+	mockRefresh: vi.fn(),
+	mockFind: vi.fn(),
+	mockUpdate: vi.fn(),
+	mockGetIndex: vi.fn(() => 'test-index'),
+	mockGetSource: vi.fn(() => ({ esClient: true })),
+}))
 
-describe('lib/util/search/DefaultSearch', () => {
-	// Test Object
-	let defaultSearch: DefaultSearch
+vi.mock('./SearchClient', () => ({
+	SearchClient: class
+	{
+		public refresh() { return mockRefresh() }
+		public search<T>(body: unknown, options: unknown) { return mockFind(body, options) as Promise<T> }
+		public update(id: string, data: unknown) { return mockUpdate(id, data) }
+		public getIndex() { return mockGetIndex() }
+		public getSource() { return mockGetSource() }
+	},
+}))
 
-	// Test cleint
-	let client: SearchClient
+import { DefaultSearch } from './DefaultSearch'
 
-	// Test index name
-	const index = 'default-search-test-index'
-
-	// Test updated slug value
-	const newSlug = 'some-new-updated-slug-value'
-
-	before(async function() {
-		// Create test client
-		client = new SearchClient(index)
-
-		// Create test index
-		await SearchClient.createIndex(index, {})
-
-		// Add seed data
-		for (let i = 0; i < seeds.length; i++) {
-			await client.add(seeds[i].id as string, seeds[i])
-		}
-
-		// Refresh data
-		await client.refresh()
+describe('lib/util/search/DefaultSearch', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async function() {
-		// Clean up
-		await client.deleteIndex()
+	it('should default the index to "default-index"', () =>
+	{
+		const search = new DefaultSearch()
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		expect((search as any).index).toBe('default-index')
 	})
 
-	describe('constructor method', () => {
-		it('with no optional params it should create a new instance of DefaultSearch', async () => {
-			// Test
-			defaultSearch = new DefaultSearch<Content>()
-
-			// Assertions
-			expect(defaultSearch).to.be.an.instanceOf(DefaultSearch)
-		})
-
-		it('when given optional client it should create a new instance of DefaultSearch', async () => {
-			// Test
-			defaultSearch = new DefaultSearch<Content>({ index, client })
-
-			// Assertions
-			expect(defaultSearch).to.be.an.instanceOf(DefaultSearch)
-		})
-
-		it('should create a new instance of DefaultSearch', async () => {
-			// Test
-			defaultSearch = new DefaultSearch<Content>({ index })
-
-			// Assertions
-			expect(defaultSearch).to.be.an.instanceOf(DefaultSearch)
-		})
+	it('should honor options.index', () =>
+	{
+		const search = new DefaultSearch({ index: 'users' })
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		expect((search as any).index).toBe('users')
 	})
 
-	describe('getSource method', () => {
-		it('should return instance of ES client', async () => {
-			// Test
-			const result = await defaultSearch.getSource()
+	it('refresh delegates to the underlying client', async () =>
+	{
+		mockRefresh.mockResolvedValue(true)
 
-			// Assertions
-			expect(result).to.be.an.instanceOf(ElasticSearchClient)
-		})
+		const search = new DefaultSearch({ index: 'x' })
+		expect(await search.refresh()).toBe(true)
+		expect(mockRefresh).toHaveBeenCalled()
 	})
 
-	describe('getClient method', () => {
-		it('should return instance of SearchClient util', async () => {
-			// Test
-			const result = await defaultSearch.getClient()
+	it('find delegates to client.search', async () =>
+	{
+		const result = { count: 0, maxScore: null, data: [] }
+		mockFind.mockResolvedValue(result)
 
-			// Assertions
-			expect(result).to.be.an.instanceOf(SearchClient)
-		})
+		const search = new DefaultSearch({ index: 'x' })
+		const body = { query: { match_all: {} } }
+		const options = { from: 0, size: 10 }
+
+		expect(await search.find(body, options)).toBe(result)
+		expect(mockFind).toHaveBeenCalledWith(body, options)
 	})
 
-	describe('find successfully matches data', () => {
-		it('should return a SearchResults with data populated', async () => {
-			// Build search body
-			const body = {
-				query: {
-					match: { id: seeds[0].id }
-				}
-			}
+	it('update delegates to client.update with id as string', async () =>
+	{
+		mockUpdate.mockResolvedValue(true)
 
-			// Test
-			const result = await defaultSearch.find(body)
+		const search = new DefaultSearch({ index: 'x' })
+		await search.update(42, { v: 1 })
 
-			// Assertions
-			expect(result)
-				.to.have.property('count')
-				.equal(1)
-			expect(result)
-				.to.have.property('maxScore')
-				.greaterThan(0)
-			expect(result)
-				.to.have.property('data')
-				.with.lengthOf(1)
-			expect(result.data[0].source)
-				.to.have.property('slug')
-				.equal(seeds[0].slug)
-		})
+		expect(mockUpdate).toHaveBeenCalledWith('42', { v: 1 })
 	})
 
-	describe('find can NOT match data', () => {
-		it('should return a SearchResults with no data populated', async () => {
-			// Build search body
-			const body = {
-				query: {
-					match: { id: 'does-not-exist' }
-				}
-			}
-
-			// Test
-			const result = await defaultSearch.find(body)
-
-			// Assertions
-			expect(result)
-				.to.have.property('count')
-				.equal(0)
-			expect(result).to.have.property('maxScore').to.be.null
-			expect(result)
-				.to.have.property('data')
-				.with.lengthOf(0)
-		})
+	it('getClient returns the underlying SearchClient', () =>
+	{
+		const search = new DefaultSearch({ index: 'x' })
+		expect(typeof search.getClient().getIndex).toBe('function')
 	})
 
-	describe('update method', () => {
-		it('should return true', async () => {
-			// Test
-			const result = await defaultSearch.update(seeds[0].id as string, {
-				slug: newSlug
-			})
-
-			// Assertions
-			expect(result).to.be.true
-		})
-	})
-
-	describe('refresh method', () => {
-		it('should return true', async () => {
-			// Test
-			const result = await defaultSearch.refresh()
-
-			// Assertions
-			expect(result).to.be.true
-		})
-	})
-
-	describe('find updated data', () => {
-		it('should return SearchResult with updated value', async () => {
-			// Test
-			const result = await defaultSearch.find({
-				query: {
-					match: { slug: newSlug }
-				}
-			})
-
-			// Assertions
-			expect(result)
-				.to.have.property('count')
-				.equal(3)
-			expect(result)
-				.to.have.property('maxScore')
-				.gt(0)
-			expect(result)
-				.to.have.property('data')
-				.with.lengthOf(3)
-		})
-
-		it('should return a SearchResults data populated for new slug value', async () => {
-			// Test
-			const result = await defaultSearch.find({
-				query: {
-					match: { slug: newSlug }
-				}
-			})
-
-			// Assertions
-			expect(result)
-				.to.have.property('count')
-				.equal(3)
-			expect(result)
-				.to.have.property('maxScore')
-				.greaterThan(0)
-			expect(result)
-				.to.have.property('data')
-				.with.lengthOf(3)
-			expect(result.data[0].source)
-				.to.have.property('slug')
-				.equal(newSlug)
-		})
+	it('getSource returns the ES source via the client', () =>
+	{
+		const search = new DefaultSearch({ index: 'x' })
+		expect(search.getSource()).toEqual({ esClient: true })
 	})
 })

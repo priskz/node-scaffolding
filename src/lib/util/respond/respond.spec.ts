@@ -1,20 +1,19 @@
-import mocks from 'node-mocks-http'
-import { respond, Responder } from './'
+import { describe, it, expect } from 'vitest'
+import { respond } from './respond'
+import { Responder } from './Responder'
+import type { Request, Response } from 'express'
 
-//----- Tests -----//
+describe('lib/util/respond/respond', () =>
+{
+	it('should construct a Responder bound to req and res', () =>
+	{
+		const r = respond({} as Request, {} as Response)
+		expect(r).toBeInstanceOf(Responder)
+	})
 
-describe('util/respond', () => {
-	describe('when called', () => {
-		it('should return new instace of Responder', async () => {
-			// Mocks
-			const req = mocks.createRequest()
-			const res = mocks.createResponse()
-
-			// Test
-			const responder = respond(req, res)
-
-			// Assertions
-			responder.should.be.an.instanceOf(Responder)
-		})
+	it('should accept an optional next function', () =>
+	{
+		const r = respond({} as Request, {} as Response, () => {})
+		expect(r).toBeInstanceOf(Responder)
 	})
 })

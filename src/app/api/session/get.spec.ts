@@ -1,27 +1,32 @@
-import { expect } from 'chai'
-import { AxiosResponse } from 'axios'
-import { appRequest } from '~/test/util'
-import { MockSession } from '~/test/mocks'
-import { getSessionIdFromHeader } from '~/test/util'
+import { describe, it, expect, vi } from 'vitest'
 
-//----- Tests -----//
+vi.mock('~/lib/util', () => ({
+	respond: (_req: unknown, res: { status: (n: number) => unknown; json: (d: unknown) => unknown }) => ({
+		success: (data: unknown, code: number = 200) =>
+		{
+			res.status(code === 200 && data === undefined ? 204 : code)
+			res.json(data)
+		},
+	}),
+}))
 
-describe('app/api/session/get', () => {
-	describe('cookie does not exist', () => {
-		it('should return 204 with new cookie session in cookie header', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.get('/session')
+vi.mock('~/config', () => ({
+	config: { session: { cookie: 'sid' } },
+}))
 
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
+import { get } from './get'
+import type { Request, Response } from 'express'
 
-			// Clean Up
-			await MockSession.destroy(validSessionId)
+describe('app/api/session/get', () =>
+{
+	it('should return 204 when called with no data', async () =>
+	{
+		const res = {
+			status: vi.fn().mockReturnThis(),
+			json: vi.fn().mockReturnThis(),
+		}
+		await get({} as Request, res as unknown as Response)
 
-			// Assertions
-			expect(result.status).equal(204)
-		})
+		expect(res.status).toHaveBeenCalledWith(204)
 	})
 })

@@ -1,116 +1,144 @@
-import { expect } from 'chai'
-import { MockSession, MockUser } from '~/test/mocks'
-import { Session, User } from '~/app/domain'
-import { AuthRoot } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-describe('app/service/root/auth/AuthRoot', () => {
-	// Unit
-	let service: AuthRoot
+const { mockHashMake, mockHashCheck, mockGetOneByEmail, mockUserCreate, mockSessionUpdate, mockSessionExpire } =
+	vi.hoisted(() => ({
+		mockHashMake: vi.fn(),
+		mockHashCheck: vi.fn(),
+		mockGetOneByEmail: vi.fn(),
+		mockUserCreate: vi.fn(),
+		mockSessionUpdate: vi.fn(),
+		mockSessionExpire: vi.fn(),
+	}))
 
-	// Mock user data
-	let userData = MockUser.getPrimaryMockUserData()
+vi.mock('~/lib/util', () => ({
+	crypt: {
+		hash: {
+			make: mockHashMake,
+			check: mockHashCheck,
+		},
+	},
+}))
 
-	// Mock User
-	let mockUser: User
+vi.mock('~/app/service/data', () => ({
+	SessionService: class
+	{
+		public update(data: unknown) { return mockSessionUpdate(data) }
+		public expire(id: string) { return mockSessionExpire(id) }
+	},
+	UserService: class
+	{
+		public getOneByEmail(email: string) { return mockGetOneByEmail(email) }
+		public create(data: unknown) { return mockUserCreate(data) }
+	},
+}))
 
-	after(async () => {
-		// Clean up
-		await MockUser.destroy(mockUser.id)
+import { AuthRoot } from './AuthRoot'
+
+describe('app/service/root/auth/AuthRoot', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	describe('constructor method', () => {
-		it('should return new instance of AuthRoot', async () => {
-			// Test
-			service = new AuthRoot()
-
-			// Assertions
-			expect(service).to.be.an.instanceOf(AuthRoot)
-		})
+	it('should construct', () =>
+	{
+		const service = new AuthRoot()
+		expect(service).toBeInstanceOf(AuthRoot)
 	})
 
-	describe('register method', () => {
-		it('valid data should return new User', async () => {
-			// Test
-			mockUser = (await service.register({
-				...userData,
-				pass: userData.password
-			})) as User
+	describe('register', () =>
+	{
+		it('should return undefined when email already registered', async () =>
+		{
+			mockGetOneByEmail.mockResolvedValue({ id: 1, email: 'a@b.com' })
 
-			// Assertions
-			expect(mockUser).to.have.property('id')
-			expect(mockUser).to.have.property('createdAt').not.null
-			expect(mockUser).to.include.keys(Object.keys(userData))
-			expect(mockUser)
-				.to.have.property('password')
-				.not.equal(userData.password)
+			const service = new AuthRoot()
+			const result = await service.register({ email: 'a@b.com', pass: 'pw' })
+
+			expect(result).toBeUndefined()
+			expect(mockUserCreate).not.toHaveBeenCalled()
 		})
 
-		it('email exists should throw', async () => {
-			// Assertion
-			expect(async function() {
-				await service.register({
-					...userData,
-					pass: userData.password
-				})
-			}).to.throw
-		})
-	})
+		it('should hash password and create user when email is new', async () =>
+		{
+			mockGetOneByEmail.mockResolvedValue(undefined)
+			mockHashMake.mockResolvedValue('hashed-pw')
+			const created = { id: 2, email: 'new@b.com' }
+			mockUserCreate.mockResolvedValue(created)
 
-	describe('login method', () => {
-		it('valid credentials should return updated Session', async () => {
-			// Create mock
-			const mockSession = (await MockSession.create()) as Session
+			const service = new AuthRoot()
+			const result = await service.register({ email: 'new@b.com', pass: 'pw' })
 
-			// Test
-			const result = await service.login(
-				mockSession,
-				userData.email,
-				userData.password
-			)
-
-			// Clean up
-			await MockSession.destroy(mockSession.id)
-
-			// Assertions
-			expect(result)
-				.to.have.property('userId')
-				.equal(mockUser.id)
-		})
-
-		it('invalid credentials should return undefined', async () => {
-			// Create mock
-			const mockSession = (await MockSession.create()) as Session
-
-			// Test
-			const result = await service.login(
-				mockSession,
-				userData.email,
-				'wrongpass'
-			)
-
-			// Clean up
-			await MockSession.destroy(mockSession.id)
-
-			// Assertions
-			expect(result).to.be.undefined
+			expect(result).toBe(created)
+			expect(mockHashMake).toHaveBeenCalledWith('pw')
+			expect(mockUserCreate).toHaveBeenCalledWith(expect.objectContaining({
+				email: 'new@b.com',
+				password: 'hashed-pw',
+			}))
 		})
 	})
 
-	describe('logout method', () => {
-		it('should expire active session', async () => {
-			// Create mock
-			const mockSession = (await MockSession.create({
-				userId: mockUser.id
-			})) as Session
+	describe('login', () =>
+	{
+		it('should return undefined when user not found', async () =>
+		{
+			mockGetOneByEmail.mockResolvedValue(undefined)
 
-			// Test
-			const result = await service.logout(mockSession)
+			const service = new AuthRoot()
+			const result = await service.login({ id: 'sid' } as never, 'none@b.com', 'pw')
 
-			// Clean up
-			await MockSession.destroy(mockSession.id)
+			expect(result).toBeUndefined()
+		})
 
-			// Assertions
-			expect(result).to.be.true
+		it('should return undefined when user has no password', async () =>
+		{
+			mockGetOneByEmail.mockResolvedValue({ id: 1, email: 'a@b.com', password: null })
+
+			const service = new AuthRoot()
+			const result = await service.login({ id: 'sid' } as never, 'a@b.com', 'pw')
+
+			expect(result).toBeUndefined()
+		})
+
+		it('should return undefined when password is invalid', async () =>
+		{
+			mockGetOneByEmail.mockResolvedValue({ id: 1, email: 'a@b.com', password: 'hash' })
+			mockHashCheck.mockResolvedValue(false)
+
+			const service = new AuthRoot()
+			const result = await service.login({ id: 'sid' } as never, 'a@b.com', 'pw')
+
+			expect(result).toBeUndefined()
+			expect(mockSessionUpdate).not.toHaveBeenCalled()
+		})
+
+		it('should attach user to session on valid credentials', async () =>
+		{
+			mockGetOneByEmail.mockResolvedValue({ id: 1, email: 'a@b.com', password: 'hash' })
+			mockHashCheck.mockResolvedValue(true)
+			const updated = { id: 'sid', userId: 1 }
+			mockSessionUpdate.mockResolvedValue(updated)
+
+			const service = new AuthRoot()
+			const result = await service.login({ id: 'sid' } as never, 'a@b.com', 'pw')
+
+			expect(result).toBe(updated)
+			expect(mockSessionUpdate).toHaveBeenCalledWith({ id: 'sid', userId: 1 })
+		})
+	})
+
+	describe('logout', () =>
+	{
+		it('should expire the session and return the result', async () =>
+		{
+			mockSessionExpire.mockResolvedValue(true)
+
+			const service = new AuthRoot()
+			const ok = await service.logout({ id: 'sid' } as never)
+
+			expect(ok).toBe(true)
+			expect(mockSessionExpire).toHaveBeenCalledWith('sid')
 		})
 	})
 })

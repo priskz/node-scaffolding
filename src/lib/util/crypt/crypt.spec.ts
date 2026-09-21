@@ -1,51 +1,43 @@
-import { expect } from 'chai'
-import { crypt } from './'
+import { describe, it, expect } from 'vitest'
+import { crypt } from './crypt'
 
-//----- Tests -----//
+describe('lib/util/crypt', () =>
+{
+	describe('hash.make', () =>
+	{
+		it('should produce a bcrypt hash that differs from the input', async () =>
+		{
+			const hash = await crypt.hash.make('password-abc')
 
-describe('util/crypt', () => {
-	describe('when crypt.hash.make is given a string', () => {
-		it('should return a hashed string value', async () => {
-			// Test Value
-			const testPassword = 'SomeSecretValue'
+			expect(hash).not.toBe('password-abc')
+			expect(hash).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]+$/)
+		})
 
-			// Test
-			const result = await crypt.hash.make(testPassword)
+		it('should produce different hashes for the same input (salted)', async () =>
+		{
+			const a = await crypt.hash.make('same-input')
+			const b = await crypt.hash.make('same-input')
 
-			// Assertions
-			expect(result.length).to.equal(60)
+			expect(a).not.toBe(b)
 		})
 	})
 
-	describe('when crypt.hash.check is given valid input', () => {
-		it('should return true', async () => {
-			// Test Value
-			const testPassword = 'SomeSecretValue'
+	describe('hash.check', () =>
+	{
+		it('should verify a matching password', async () =>
+		{
+			const hash = await crypt.hash.make('correct-horse')
+			const ok = await crypt.hash.check('correct-horse', hash)
 
-			// Create a hash
-			const hash = await crypt.hash.make(testPassword)
-
-			// Test
-			const result = await crypt.hash.check(testPassword, hash)
-
-			// Assertions
-			expect(result).to.be.true
+			expect(ok).toBe(true)
 		})
-	})
 
-	describe('when crypt.hash.check is given invalid input', () => {
-		it('should return false', async () => {
-			// Test Value
-			const testPassword = 'SomeSecretValue'
+		it('should reject a mismatched password', async () =>
+		{
+			const hash = await crypt.hash.make('correct-horse')
+			const ok = await crypt.hash.check('wrong-horse', hash)
 
-			// Create a hash
-			const hash = await crypt.hash.make(testPassword)
-
-			// Test
-			const result = await crypt.hash.check('InvalidValue', hash)
-
-			// Assertions
-			expect(result).to.be.false
+			expect(ok).toBe(false)
 		})
 	})
 })

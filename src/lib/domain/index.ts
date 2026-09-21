@@ -1,2 +1,2 @@
-export * from './TypeORMRepository'
+export * from './PrismaRepository'
 export * from './types'

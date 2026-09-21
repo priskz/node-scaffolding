@@ -1,139 +1,93 @@
-import { expect } from 'chai'
-import { MockSession, MockUser } from '~/test/mocks'
-import { AxiosResponse } from 'axios'
-import { appRequest } from '~/test/util'
-import { getSessionIdFromHeader } from '~/test/util'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { mockRegister } = vi.hoisted(() => ({
+	mockRegister: vi.fn(),
+}))
 
-describe('app/api/auth/register', () => {
-	// Guest user data
-	let guestData = MockUser.guest()
+vi.mock('~/lib/util', () => ({
+	respond: (_req: unknown, res: { status: (n: number) => unknown; json: (d: unknown) => unknown }) => ({
+		success: (data?: unknown, code: number = 200) =>
+		{
+			res.status(code === 200 && data === undefined ? 204 : code)
+			res.json(data)
+		},
+		error: (data?: unknown, code: number = 400) =>
+		{
+			res.status(code)
+			res.json(data)
+		},
+	}),
+}))
 
-	after(async () => {
-		// Clean up
-		await MockUser.destroyByEmail(guestData.email)
+vi.mock('~/app/service', () => ({
+	AuthRoot: class
+	{
+		public register(data: unknown) { return mockRegister(data) }
+	},
+}))
+
+import { register } from './register'
+import type { Request, Response } from 'express'
+
+function mockRes()
+{
+	return {
+		status: vi.fn().mockReturnThis(),
+		json: vi.fn().mockReturnThis(),
+	}
+}
+
+describe('app/api/auth/register', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	describe('valid input', () => {
-		it('should return 204 No Content', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/register', {
-				...guestData,
-				pass: guestData.password
-			})
+	it('should 400 on invalid input (bad email)', async () =>
+	{
+		const req = { body: { email: 'not-an-email', pass: 'abcdef' } }
+		const res = mockRes()
 
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
+		await register(req as unknown as Request, res as unknown as Response)
 
-			// Clean Up
-			MockSession.destroy(validSessionId)
-
-			// Assertions
-			expect(result.status).to.equal(204)
-		})
+		expect(mockRegister).not.toHaveBeenCalled()
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 
-	describe('existing user', () => {
-		it('should return 400 Bad Request', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/register', {
-				...guestData,
-				pass: guestData.password
-			})
+	it('should 400 on invalid input (short password)', async () =>
+	{
+		const req = { body: { email: 'a@b.com', pass: '123' } }
+		const res = mockRes()
 
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
+		await register(req as unknown as Request, res as unknown as Response)
 
-			// Clean Up
-			MockSession.destroy(validSessionId)
-
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
+		expect(mockRegister).not.toHaveBeenCalled()
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 
-	describe('invalid input', () => {
-		it('email.email should return 400 Bad Request', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/register', {
-				...guestData,
-				email: 'invalidemailformat',
-				pass: '12345'
-			})
+	it('should 400 when registration fails (duplicate email)', async () =>
+	{
+		mockRegister.mockResolvedValue(undefined)
 
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
+		const req = { body: { email: 'a@b.com', pass: 'abcdef' } }
+		const res = mockRes()
 
-			// Clean Up
-			MockSession.destroy(validSessionId)
+		await register(req as unknown as Request, res as unknown as Response)
 
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
+		expect(res.status).toHaveBeenCalledWith(400)
+	})
 
-		it('email.required should return 400 Bad Request', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/register', {
-				...guestData,
-				email: undefined,
-				pass: '12345'
-			})
+	it('should respond 204 on successful registration', async () =>
+	{
+		mockRegister.mockResolvedValue({ id: 1, email: 'a@b.com' })
 
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
+		const req = { body: { email: 'a@b.com', pass: 'abcdef' } }
+		const res = mockRes()
 
-			// Clean Up
-			MockSession.destroy(validSessionId)
+		await register(req as unknown as Request, res as unknown as Response)
 
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
-
-		it('pass.required should return 400 Bad Request', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post(
-				'/auth/register',
-				guestData
-			)
-
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
-
-			// Clean Up
-			MockSession.destroy(validSessionId)
-
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
-
-		it('pass.minLength should return 400 Bad Request', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/register', {
-				...guestData,
-				pass: '12345'
-			})
-
-			// Extract session id
-			const validSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
-
-			// Clean Up
-			MockSession.destroy(validSessionId)
-
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
+		expect(mockRegister).toHaveBeenCalledWith({ email: 'a@b.com', pass: 'abcdef' })
+		expect(res.status).toHaveBeenCalledWith(204)
 	})
 })

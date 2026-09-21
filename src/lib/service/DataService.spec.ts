@@ -1,120 +1,119 @@
-import { expect } from 'chai'
-import { getCustomRepository } from 'typeorm'
-import { MockUser } from '~/test/mocks'
-import { UserRepository } from '~/app/domain'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DataService } from './DataService'
-import { User } from '~/app/domain'
 
-describe('lib/service/DataService', () => {
-	// Mock Data
-	const mockData = {
-		email: 'dataservice@unit-test.com',
-		firstName: 'Unit',
-		lastName: 'Test',
-		country: 'USA',
-		password: 'test-password'
+interface Row { id: string; name: string }
+
+function mockRepository()
+{
+	return {
+		get: vi.fn(),
+		getWithCount: vi.fn(),
+		paginate: vi.fn(),
+		cursorPaginate: vi.fn(),
+		getOne: vi.fn(),
+		create: vi.fn(),
+		update: vi.fn(),
+		delete: vi.fn(),
+		restore: vi.fn(),
+		forceDelete: vi.fn(),
 	}
+}
 
-	// Mock Record
-	let mockUser: User
+describe('lib/service/DataService', () =>
+{
+	let repo: ReturnType<typeof mockRepository>
+	let service: DataService<Row>
 
-	// Test Unit
-	let service: DataService<User>
-
-	after(async () => {
-		// Clean up
-		await MockUser.destroy(mockUser.id)
+	beforeEach(() =>
+	{
+		repo = mockRepository()
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		service = new DataService<Row>(repo as any)
 	})
 
-	describe('when constructor is called', () => {
-		it('should return new instance of DataService', async () => {
-			// Test
-			service = new DataService(getCustomRepository(UserRepository))
+	it('get delegates to repository.get', async () =>
+	{
+		const rows: Row[] = [{ id: '1', name: 'Alice' }]
+		repo.get.mockResolvedValue(rows)
 
-			// Assertions
-			expect(service).to.be.an.instanceOf(DataService)
-		})
+		const result = await service.get({ where: { id: '1' } })
+
+		expect(result).toBe(rows)
+		expect(repo.get).toHaveBeenCalledWith({ where: { id: '1' } })
 	})
 
-	describe('when create method is given valid data', () => {
-		it('should create a new User record', async () => {
-			// Test
-			mockUser = (await service.create(mockData)) as User
-
-			// Assertions
-			expect(mockUser).to.have.keys(Object.keys(mockData))
-			expect(mockUser).to.include(mockData)
-		})
+	it('get with no args delegates with an empty query', async () =>
+	{
+		repo.get.mockResolvedValue([])
+		await service.get()
+		expect(repo.get).toHaveBeenCalledWith({})
 	})
 
-	describe('when update method is given valid data', () => {
-		it('should update an existing User record', async () => {
-			const newFirstName = 'Updated'
-
-			// Modify mock data
-			mockData.firstName = newFirstName
-
-			// Test
-			mockUser = (await service.update(mockUser)) as User
-
-			// Assertions
-			expect(mockUser).to.have.property('firstName', newFirstName)
-		})
+	it('getWithCount delegates', async () =>
+	{
+		repo.getWithCount.mockResolvedValue([[], 0])
+		await service.getWithCount({ where: {} })
+		expect(repo.getWithCount).toHaveBeenCalled()
 	})
 
-	describe('when get method is given no arguments ', () => {
-		it('should return an array of records ', async () => {
-			// Test
-			const result = await service.get()
+	it('paginate delegates to repository.paginate', async () =>
+	{
+		const page = { data: [], total: 0, page: 1, perPage: 20 }
+		repo.paginate.mockResolvedValue(page)
 
-			// Assertions
-			expect(result).to.have.lengthOf(1)
-			expect(result[0]).to.have.keys(Object.keys(mockData))
-			expect(result[0]).to.have.property('updatedAt').to.be.not.null
-		})
+		const result = await service.paginate({ where: {} }, { page: 1, perPage: 20 })
+
+		expect(result).toBe(page)
+		expect(repo.paginate).toHaveBeenCalledWith({ where: {} }, { page: 1, perPage: 20 })
 	})
 
-	describe('when getWithCount method is given no arguments', () => {
-		it('should return a tuple with array of records at index 0 and the count at index 1', async () => {
-			// Test
-			const result = await service.getWithCount()
-
-			// Assertions
-			expect(result[0]).to.have.lengthOf(1)
-			expect(result[0][0]).to.have.keys(Object.keys(mockData))
-			expect(result[0][0]).to.have.property('updatedAt').to.be.not.null
-			expect(result[1]).to.equal(1)
-		})
+	it('cursorPaginate delegates', async () =>
+	{
+		repo.cursorPaginate.mockResolvedValue({ data: [], nextCursor: null })
+		await service.cursorPaginate({}, { limit: 10 })
+		expect(repo.cursorPaginate).toHaveBeenCalled()
 	})
 
-	describe('when getOne method is given no arguments ', () => {
-		it('should return a single record ', async () => {
-			// Test
-			const result = await service.getOne()
+	it('getOne delegates', async () =>
+	{
+		const row: Row = { id: '1', name: 'Alice' }
+		repo.getOne.mockResolvedValue(row)
 
-			// Assertions
-			expect(result).to.have.keys(Object.keys(mockData))
-			expect(result).to.have.property('updatedAt').to.be.not.null
-		})
+		expect(await service.getOne({ where: { id: '1' } })).toBe(row)
 	})
 
-	describe('when delete method is given an existing id ', () => {
-		it('should return true ', async () => {
-			// Test
-			const result = await service.delete(mockUser.id)
-
-			// Assertions
-			expect(result).to.be.true
-		})
+	it('create delegates', async () =>
+	{
+		repo.create.mockResolvedValue({ id: '1', name: 'Alice' })
+		await service.create({ name: 'Alice' })
+		expect(repo.create).toHaveBeenCalledWith({ name: 'Alice' })
 	})
 
-	describe('when delete method is given an non existent id', () => {
-		it('should return false ', async () => {
-			// Test
-			const result = await service.delete(999999)
+	it('update delegates', async () =>
+	{
+		repo.update.mockResolvedValue({ id: '1', name: 'Bob' })
+		await service.update({ id: '1', name: 'Bob' })
+		expect(repo.update).toHaveBeenCalledWith({ id: '1', name: 'Bob' })
+	})
 
-			// Assertions
-			expect(result).to.be.false
-		})
+	it('delete delegates and returns the boolean result', async () =>
+	{
+		repo.delete.mockResolvedValue(true)
+		expect(await service.delete('1')).toBe(true)
+		expect(repo.delete).toHaveBeenCalledWith('1')
+	})
+
+	it('restore delegates', async () =>
+	{
+		repo.restore.mockResolvedValue({ id: '1', name: 'Alice' })
+		await service.restore('1')
+		expect(repo.restore).toHaveBeenCalledWith('1')
+	})
+
+	it('forceDelete delegates', async () =>
+	{
+		repo.forceDelete.mockResolvedValue(true)
+		expect(await service.forceDelete('1')).toBe(true)
+		expect(repo.forceDelete).toHaveBeenCalledWith('1')
 	})
 })

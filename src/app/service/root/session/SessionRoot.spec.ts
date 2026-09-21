@@ -1,93 +1,94 @@
-import { expect } from 'chai'
-import { MockSession } from '~/test/mocks'
-import { Session } from '~/app/domain'
-import { SessionRoot } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-describe('app/service/root/session/SessionRoot', () => {
-	// Unit
-	let service: SessionRoot
+const { mockCreate, mockGetOne, mockUpdate, mockTimeNow } = vi.hoisted(() => ({
+	mockCreate: vi.fn(),
+	mockGetOne: vi.fn(),
+	mockUpdate: vi.fn(),
+	mockTimeNow: vi.fn(),
+}))
 
-	// Mock Session
-	let mockSession: Session
+vi.mock('~/config', () => ({
+	config: { session: { duration: { guest: 7 } } },
+}))
 
-	before(async () => {
-		// Clean up
-		mockSession = (await MockSession.create()) as Session
+vi.mock('~/lib/util', () => ({
+	time: { now: mockTimeNow },
+}))
+
+vi.mock('~/app/service/data', () => ({
+	SessionService: class
+	{
+		public create(data: unknown) { return mockCreate(data) }
+		public getOne(query: unknown) { return mockGetOne(query) }
+		public update(data: unknown) { return mockUpdate(data) }
+	},
+}))
+
+import { SessionRoot } from './SessionRoot'
+
+describe('app/service/root/session/SessionRoot', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await MockSession.destroy(mockSession.id)
+	it('should construct', () =>
+	{
+		const service = new SessionRoot()
+		expect(service).toBeInstanceOf(SessionRoot)
 	})
 
-	describe('constructor method', () => {
-		it('should return new instance of SessionRoot', async () => {
-			// Test
-			service = new SessionRoot()
+	describe('generate', () =>
+	{
+		it('should create a session with guest duration expiration', async () =>
+		{
+			const expires = new Date('2026-01-08T00:00:00Z')
+			mockTimeNow.mockReturnValue({
+				plus: vi.fn(() => ({ toJSDate: () => expires })),
+			})
+			const created = { id: 'sid', expiresAt: expires }
+			mockCreate.mockResolvedValue(created)
 
-			// Assertions
-			expect(service).to.be.an.instanceOf(SessionRoot)
+			const service = new SessionRoot()
+			const result = await service.generate('mozilla', '1.2.3.4')
+
+			expect(result).toBe(created)
+			expect(mockCreate).toHaveBeenCalledWith({
+				agent: 'mozilla',
+				ipAddress: '1.2.3.4',
+				expiresAt: expires,
+			})
 		})
 	})
 
-	describe('generate method', () => {
-		it('should return new Session', async () => {
-			// Test
-			const result = (await service.generate(
-				'test-user-agent',
-				'127.0.0.0.1'
-			)) as Session
+	describe('getOneById', () =>
+	{
+		it('should fetch with user embedded', async () =>
+		{
+			const session = { id: 'sid' }
+			mockGetOne.mockResolvedValue(session)
 
-			// Clean up
-			await MockSession.destroy(result.id)
+			const service = new SessionRoot()
+			const result = await service.getOneById('sid')
 
-			// Assertions
-			expect(result)
-				.to.have.property('agent')
-				.to.equal('test-user-agent')
-			expect(result)
-				.to.have.property('ipAddress')
-				.to.equal('127.0.0.0.1')
+			expect(result).toBe(session)
+			expect(mockGetOne).toHaveBeenCalledWith({ where: { id: 'sid' }, embed: ['user'] })
 		})
 	})
 
-	describe('getOneById method', () => {
-		it('if found should return Session', async () => {
-			// Test
-			const result = await service.getOneById(mockSession.id)
+	describe('touch', () =>
+	{
+		it('should update activeAt to current time', async () =>
+		{
+			const now = new Date('2026-01-01T00:00:00Z')
+			mockTimeNow.mockReturnValue({ toJSDate: () => now })
+			mockUpdate.mockResolvedValue({ id: 'sid' })
 
-			// Assertions
-			expect(result)
-				.to.have.property('id')
-				.to.equal(mockSession.id)
-		})
+			const service = new SessionRoot()
+			await service.touch('sid')
 
-		it('if NOT found should return undefined', async () => {
-			// Test
-			const reuslt = await service.getOneById('id-does-not-exist-in-db')
-
-			// Assertions
-			expect(reuslt).to.be.undefined
-		})
-	})
-
-	describe('touch method', () => {
-		it('should update Session activateAt and return void', async () => {
-			// Current session
-			const beforeSession = (await service.getOneById(
-				mockSession.id
-			)) as Session
-
-			// Test1
-			const result1 = await service.touch(beforeSession.id)
-
-			// Test2
-			const result2 = (await service.getOneById(mockSession.id)) as Session
-
-			// Assertions
-			expect(result1).to.be.undefined
-			expect(result2.activeAt).to.not.equal(beforeSession.activeAt)
-			expect(result2.updatedAt).to.not.equal(beforeSession.updatedAt)
+			expect(mockUpdate).toHaveBeenCalledWith({ id: 'sid', activeAt: now })
 		})
 	})
 })

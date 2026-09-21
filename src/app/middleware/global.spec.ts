@@ -1,58 +1,56 @@
-import { expect } from 'chai'
-import mocks from 'node-mocks-http'
-import { global } from './'
+import { describe, it, expect, vi } from 'vitest'
+import { global as globalMiddleware } from './global'
+import type { Request, Response, NextFunction } from 'express'
 
-//----- Tests -----//
+function mockRequest(): Request
+{
+	return {} as Request
+}
 
-describe('middleware/global', () => {
-	describe('when any request is made', () => {
-		it('should define context properties on the request object', async () => {
-			// Init request & response objects
-			const req = mocks.createRequest()
-			const res = mocks.createResponse()
+describe('app/middleware/global', () =>
+{
+	it('should install context, setSession, getSession, getUser on the request', async () =>
+	{
+		const req = mockRequest()
+		const res = {} as Response
+		const next = vi.fn() as unknown as NextFunction
 
-			// Test
-			await global(req, res, () => undefined)
+		await globalMiddleware(req, res, next)
 
-			// Assertions
-			expect(req).to.have.property('context')
-			expect(req).to.have.property('setSession')
-			expect(req).to.have.property('getSession')
-			expect(req).to.have.property('getUser')
-		})
+		expect(typeof req.setSession).toBe('function')
+		expect(typeof req.getSession).toBe('function')
+		expect(typeof req.getUser).toBe('function')
+		expect(next).toHaveBeenCalled()
 	})
 
-	describe('getSession function', () => {
-		it('should return user object on session in context', async () => {
-			// Init request & response objects
-			const req = mocks.createRequest()
-			const res = mocks.createResponse()
+	it('should store session via setSession and retrieve via getSession', async () =>
+	{
+		const req = mockRequest()
+		await globalMiddleware(req, {} as Response, (() => {}) as NextFunction)
 
-			// Run middleware
-			await global(req, res, () => undefined)
+		const session = { id: 'sid' } as never
+		req.setSession(session)
 
-			// Test
-			const result = req.getSession()
-
-			// Assertions
-			expect(result).to.not.be.undefined
-		})
+		expect(req.getSession()).toBe(session)
 	})
 
-	describe('getUser function', () => {
-		it('should return user object on session in context', async () => {
-			// Init request & response objects
-			const req = mocks.createRequest()
-			const res = mocks.createResponse()
+	it('should return undefined from getUser when no session set', async () =>
+	{
+		const req = mockRequest()
+		await globalMiddleware(req, {} as Response, (() => {}) as NextFunction)
 
-			// Run middleware
-			await global(req, res, () => undefined)
+		expect(req.getUser()).toBeUndefined()
+	})
 
-			// Test
-			const result = req.getUser()
+	it('should expose user through getUser when session carries a user', async () =>
+	{
+		const req = mockRequest()
+		await globalMiddleware(req, {} as Response, (() => {}) as NextFunction)
 
-			// Assertions
-			expect(result).to.be.undefined
-		})
+		const user = { id: 1, email: 'a@b.com' }
+		// The getUser implementation dereferences session.user, so carry it on the session.
+		req.setSession({ id: 'sid', user } as never)
+
+		expect(req.getUser()).toEqual(user)
 	})
 })

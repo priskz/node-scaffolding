@@ -1,11 +1,19 @@
-import { EntityRepository } from 'typeorm'
-import { TypeORMRepository } from '~/lib/domain/TypeORMRepository'
-import { Content } from './Content'
+import { PrismaRepository } from '~/lib/domain'
+import { Content } from '~/generated/prisma/client'
 
-@EntityRepository(Content)
-export class ContentRepository extends TypeORMRepository<Content> {
+export class ContentRepository extends PrismaRepository<Content> {
 	/*
-	 * Eager loading configuration.
+	 * Prisma model name
 	 */
-	protected eager: string[] = ['category', 'image', 'tag']
+	protected modelName = 'content'
+
+	/*
+	 * Soft deletes
+	 */
+	protected softDeletes = true
+
+	/*
+	 * Eager loading
+	 */
+	protected eager: string[] = ['category', 'image', 'tags']
 }

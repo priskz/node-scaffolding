@@ -1,124 +1,144 @@
-import { expect } from 'chai'
-import { seeds } from '~/test/seeds/content'
-import { SearchClient } from '~/lib/util'
-import { Content, ContentSearch } from './'
-import { ContentSchema } from './types/ContentSchema'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-describe('app/domain/search/content/ContentSearch', () => {
-	// Test Subject
-	let contentSearch: ContentSearch
+const mockFind = vi.fn()
+const mockUpdate = vi.fn()
+const mockRefresh = vi.fn()
+const mockUpdateByQuery = vi.fn()
+const mockGetIndex = vi.fn(() => 'test-index')
 
-	// Test index name
-	const index = 'test-content-search-index'
-
-	// Search Client
-	let client: SearchClient
-
-	before(async () => {
-		// Create client
-		client = new SearchClient(index)
-
-		// Create test index
-		await SearchClient.createIndex(index, ContentSchema)
-
-		// Add seed data
-		for (let i = 0; i < seeds.length; i++) {
-			await client.add(seeds[i].id as string, seeds[i])
+vi.mock('~/lib/util', () =>
+{
+	class DefaultSearch
+	{
+		protected index: string
+		constructor(options: { index?: string } = {})
+		{
+			this.index = options.index ?? 'default'
 		}
+		public find(...args: unknown[]) { return mockFind(...args) }
+		public update(...args: unknown[]) { return mockUpdate(...args) }
+		public refresh() { return mockRefresh() }
+		public getClient() { return { getIndex: mockGetIndex } }
+		public getSource() { return { updateByQuery: mockUpdateByQuery } }
+	}
 
-		// Refresh index
-		await client.refresh()
+	return {
+		DefaultSearch,
+		log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	}
+})
+
+import { ContentSearch } from './ContentSearch'
+
+describe('app/domain/content/ContentSearch', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await client.deleteIndex()
-	})
+	describe('replace', () =>
+	{
+		it('should return false when the document is not indexed', async () =>
+		{
+			mockFind.mockResolvedValue({ data: [] })
 
-	describe('constructor method', () => {
-		it('should create a new instance', async () => {
-			// Test
-			contentSearch = new ContentSearch({ index })
+			const search = new ContentSearch({ index: 'test-index' })
+			const result = await search.replace('missing', { id: 'missing' } as never)
 
-			// Assertions
-			expect(contentSearch).to.be.an.instanceOf(ContentSearch)
+			expect(result).toBe(false)
+			expect(mockUpdate).not.toHaveBeenCalled()
 		})
-	})
 
-	describe('when replace is called', () => {
-		it('should update instance and return true', async () => {
-			// Updated data
-			const data = {
-				name: 'UpdatedGeographyCategoryName',
-				slug: 'updated-geography-category-slug'
+		it('should return false when update fails', async () =>
+		{
+			mockFind.mockResolvedValue({ data: [{ source: { category: {}, tag: [] } }] })
+			mockUpdate.mockResolvedValue(false)
+
+			const search = new ContentSearch({ index: 'test-index' })
+			const result = await search.replace('id1', { id: 'id1', category: {}, tag: [] } as never)
+
+			expect(result).toBe(false)
+		})
+
+		it('should update, process references, refresh, and return true on success', async () =>
+		{
+			const existing = {
+				source: {
+					category: { id: 'c1', name: 'Old' },
+					tag: [{ id: 't1', name: 'Original' }],
+				},
 			}
-
-			const result1 = await contentSearch.find({
-				query: {
-					match: { 'category.slug': 'geography' }
-				}
+			mockFind.mockResolvedValue({ data: [existing] })
+			mockUpdate.mockResolvedValue(true)
+			mockRefresh.mockResolvedValue(true)
+			mockUpdateByQuery.mockResolvedValue({
+				statusCode: 200,
+				body: {
+					timed_out: false,
+					took: 5,
+					total: 0,
+					updated: 0,
+					batches: 1,
+					version_conflicts: 0,
+				},
 			})
 
-			// Test Data
+			const search = new ContentSearch({ index: 'test-index' })
 			const content = {
-				category: {
-					id: 'ea3ec826372c4a6f8ec66ad085f1c419',
-					name: data.name,
-					slug: data.slug
-				}
-			} as Content
+				id: 'id1',
+				category: { id: 'c1', name: 'New' },
+				tag: [{ id: 't1', name: 'Original' }],
+			} as never
 
-			// Test
-			const result2 = await contentSearch.replace(
-				seeds[0].id as string,
-				content
-			)
+			const result = await search.replace('id1', content)
 
-			await client.refresh()
+			expect(result).toBe(true)
+			expect(mockUpdate).toHaveBeenCalledWith('id1', content)
+			expect(mockRefresh).toHaveBeenCalled()
+		})
 
-			const result3 = await contentSearch.find({
-				query: {
-					match: { 'category.slug': 'geography' }
-				}
-			})
+		it('should return true even when a reference update returns a non-200', async () =>
+		{
+			const existing = {
+				source: {
+					category: { id: 'c1', name: 'Old' },
+					tag: [],
+				},
+			}
+			mockFind.mockResolvedValue({ data: [existing] })
+			mockUpdate.mockResolvedValue(true)
+			mockRefresh.mockResolvedValue(true)
+			mockUpdateByQuery.mockResolvedValue({ statusCode: 500, body: {} })
 
-			// Assertions
-			expect(result1)
-				.to.have.property('count')
-				.equal(8)
-			expect(result1)
-				.to.have.property('maxScore')
-				.greaterThan(0)
-			expect(result1)
-				.to.have.property('data')
-				.with.lengthOf(8)
-			expect(result2).to.be.true
-			expect(result3)
-				.to.have.property('count')
-				.equal(0)
-			expect(result3).to.have.property('maxScore').to.be.null
-			expect(result3)
-				.to.have.property('data')
-				.with.lengthOf(0)
+			const search = new ContentSearch({ index: 'test-index' })
+			const result = await search.replace('id1', {
+				id: 'id1',
+				category: { id: 'c1', name: 'New' },
+				tag: [],
+			} as never)
+
+			expect(result).toBe(true)
 		})
 	})
 
-	describe('replace is called on entity that does not exist in search index', () => {
-		it('should return false', async () => {
-			// Test Data
-			const content = {
-				category: {
-					id: 'ea3ec826372c4a6f8ec66ad085f1c419',
-					name: 'Geography',
-					slug: 'geography'
-				}
-			} as Content
+	describe('reference deltas', () =>
+	{
+		it('should skip reference update when reference value is unchanged', async () =>
+		{
+			const same = { id: 'c1', name: 'Same' }
+			mockFind.mockResolvedValue({ data: [{ source: { category: same, tag: [] } }] })
+			mockUpdate.mockResolvedValue(true)
+			mockRefresh.mockResolvedValue(true)
 
-			// Test
-			const result = await contentSearch.replace('no-existing-id', content)
+			const search = new ContentSearch({ index: 'test-index' })
+			await search.replace('id1', {
+				id: 'id1',
+				category: { ...same },
+				tag: [],
+			} as never)
 
-			// Assertions
-			expect(result).to.be.false
+			expect(mockUpdateByQuery).not.toHaveBeenCalled()
 		})
 	})
 })

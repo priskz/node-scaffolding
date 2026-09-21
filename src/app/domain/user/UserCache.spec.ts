@@ -1,156 +1,162 @@
-import { expect } from 'chai'
-import { MockUser } from '~/test/mocks'
-import { User } from '~/app/domain'
-import { UserCache } from '~/app/domain'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-describe('src/app/domain/user/UserCache', () => {
-	// Unit
-	let userCache: UserCache
+const mockGetRaw = vi.fn()
+const mockSet = vi.fn()
+const mockFindOneById = vi.fn()
 
-	// Mock User
-	let mockUser: User
+vi.mock('~/lib/util', () => ({
+	DefaultCache: class
+	{
+		protected prefix = ''
+		protected db = 0
+		public getRaw(id: string | number) { return mockGetRaw(id) }
+		public set(id: string | number, data: unknown) { return mockSet(id, data) }
+	},
+}))
 
-	before(async () => {
-		// Create a mock userclear
-		mockUser = (await MockUser.create({
-			email: 'UserCache@unit-test.com'
-		})) as User
+vi.mock('~/app/domain/user/UserRepository', () => ({
+	UserRepository: class { public findOneById(id: number) { return mockFindOneById(id) } },
+}))
+
+import { UserCache } from './UserCache'
+
+describe('app/domain/user/UserCache', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await userCache.flush()
-		await MockUser.destroy(mockUser.id)
-	})
-
-	describe('constructor method', () => {
-		it('should create a new instance', async () => {
-			// Test
-			userCache = new UserCache()
-
-			// Assertions
-			userCache.should.be.an.instanceOf(UserCache)
-		})
-	})
-
-	describe('getSource method', () => {
-		it('should return raw data from source', async () => {
-			// Test
-			const result = (await userCache.getSource(mockUser.id)) as User
-
-			// Assertions
-			expect(result.id).to.equal(mockUser.id)
-			expect(result.firstName).to.equal(mockUser.firstName)
-			expect(result.email).to.equal(mockUser.email)
-		})
-
-		it('should return undefined if not found', async () => {
-			// Test
-			const result = (await userCache.getSource(0)) as User
-
-			// Assertions
-			expect(result).to.be.undefined
+	describe('configuration', () =>
+	{
+		it('should use user prefix and db 1', () =>
+		{
+			const cache = new UserCache()
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			expect((cache as any).prefix).toBe('user')
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			expect((cache as any).db).toBe(1)
 		})
 	})
 
-	describe('save method', () => {
-		it('should set given User in cache and return true', async () => {
-			// Test
-			const result = await userCache.save(mockUser)
+	describe('fetch', () =>
+	{
+		it('should return parsed user when cache hit', async () =>
+		{
+			const user = { id: 1, email: 'a@b.com' }
+			mockGetRaw.mockResolvedValue(JSON.stringify(user))
 
-			// Assertions
-			expect(result).to.be.true
+			const cache = new UserCache()
+			const result = await cache.fetch(1)
+
+			expect(result).toEqual(user)
+			expect(mockFindOneById).not.toHaveBeenCalled()
+			expect(mockSet).not.toHaveBeenCalled()
 		})
 
-		it('when refresh param is true it should retrieve from source, set given User in cache, and return true', async () => {
-			// Test
-			const result = await userCache.save(mockUser, true)
+		it('should load from source and cache when cache miss with shouldCache=true', async () =>
+		{
+			const user = { id: 2, email: 'a@b.com' }
+			mockGetRaw.mockResolvedValue(null)
+			mockFindOneById.mockResolvedValue(user)
+			mockSet.mockResolvedValue(true)
 
-			// Clean up
-			await userCache.flush()
+			const cache = new UserCache()
+			const result = await cache.fetch(2)
 
-			// Assertions
-			expect(result).to.be.true
+			expect(result).toEqual(user)
+			expect(mockFindOneById).toHaveBeenCalledWith(2)
+			expect(mockSet).toHaveBeenCalledWith(2, JSON.stringify(user))
 		})
 
-		it('when refresh param is true and id does not exist in source it should return false', async () => {
-			// Mock
-			const missingUser = { id: 0 } as User
+		it('should return undefined on cache miss when shouldCache=false', async () =>
+		{
+			mockGetRaw.mockResolvedValue(null)
 
-			// Test
-			const result = await userCache.save(missingUser, true)
+			const cache = new UserCache()
+			const result = await cache.fetch(3, false)
 
-			// Assertions
-			expect(result).to.be.false
+			expect(result).toBeUndefined()
+			expect(mockFindOneById).not.toHaveBeenCalled()
+		})
+
+		it('should return undefined when source miss', async () =>
+		{
+			mockGetRaw.mockResolvedValue(null)
+			mockFindOneById.mockResolvedValue(undefined)
+
+			const cache = new UserCache()
+			const result = await cache.fetch(4)
+
+			expect(result).toBeUndefined()
+			expect(mockSet).not.toHaveBeenCalled()
 		})
 	})
 
-	describe('saveById method', () => {
-		it('should return true if found and set in cache', async () => {
-			// Test
-			const result = await userCache.saveById(mockUser.id)
+	describe('saveById', () =>
+	{
+		it('should cache the user looked up by id', async () =>
+		{
+			const user = { id: 5, email: 'c@d.com' }
+			mockFindOneById.mockResolvedValue(user)
+			mockSet.mockResolvedValue(true)
 
-			// Clean up
-			await userCache.flush()
+			const cache = new UserCache()
+			const ok = await cache.saveById(5)
 
-			// Assertions
-			expect(result).to.be.true
+			expect(ok).toBe(true)
+			expect(mockSet).toHaveBeenCalledWith(5, JSON.stringify(user))
 		})
 
-		it('should return false if not found in source', async () => {
-			// Test
-			const result = await userCache.saveById(0)
+		it('should return false when user not found', async () =>
+		{
+			mockFindOneById.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(result).to.be.false
+			const cache = new UserCache()
+			const ok = await cache.saveById(6)
+
+			expect(ok).toBe(false)
+			expect(mockSet).not.toHaveBeenCalled()
 		})
 	})
 
-	describe('fetch method', () => {
-		it('if optional param is false it should return undefined if not found in cache', async () => {
-			// Test
-			const result = await userCache.fetch(mockUser.id, false)
+	describe('save', () =>
+	{
+		it('should cache the given user', async () =>
+		{
+			const user = { id: 7, email: 'e@f.com' }
+			mockSet.mockResolvedValue(true)
 
-			// Assertions
-			expect(result).to.be.undefined
+			const cache = new UserCache()
+			const ok = await cache.save(user as never)
+
+			expect(ok).toBe(true)
+			expect(mockSet).toHaveBeenCalledWith(7, JSON.stringify(user))
 		})
 
-		it('if not in cache, should retrieve from source, add to cache, and return User', async () => {
-			// Test
-			const result = (await userCache.fetch(mockUser.id)) as User
+		it('should refresh from source when refresh=true', async () =>
+		{
+			const stale = { id: 8, email: 'g@h.com' }
+			const fresh = { id: 8, email: 'fresh@example.com' }
+			mockFindOneById.mockResolvedValue(fresh)
+			mockSet.mockResolvedValue(true)
 
-			// Assertions
-			expect(result.id).to.equal(mockUser.id)
-			expect(result.firstName).to.equal(mockUser.firstName)
-			expect(result.email).to.equal(mockUser.email)
+			const cache = new UserCache()
+			const ok = await cache.save(stale as never, true)
+
+			expect(ok).toBe(true)
+			expect(mockSet).toHaveBeenCalledWith(8, JSON.stringify(fresh))
 		})
 
-		it('if in cache and optional cache param is false, it should return User', async () => {
-			// Test
-			const result = (await userCache.fetch(mockUser.id, false)) as User
+		it('should return false when refresh finds no source', async () =>
+		{
+			mockFindOneById.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(result.id).to.equal(mockUser.id)
-			expect(result.firstName).to.equal(mockUser.firstName)
-			expect(result.email).to.equal(mockUser.email)
-		})
+			const cache = new UserCache()
+			const ok = await cache.save({ id: 9 } as never, true)
 
-		it('if in cache and no optional param is given it should return User', async () => {
-			// Test
-			const result = (await userCache.fetch(mockUser.id)) as User
-
-			// Assertions
-			expect(result.id).to.equal(mockUser.id)
-			expect(result.firstName).to.equal(mockUser.firstName)
-			expect(result.email).to.equal(mockUser.email)
-		})
-
-		it('if source not found should return undefined', async () => {
-			// Test
-			const result = (await userCache.fetch(0)) as User
-
-			// Assertions
-			expect(result).to.be.undefined
+			expect(ok).toBe(false)
+			expect(mockSet).not.toHaveBeenCalled()
 		})
 	})
 })

@@ -1,318 +1,268 @@
-import { expect } from 'chai'
-import { SearchClient } from './'
-import { ContentSchema } from '~/app/domain/content'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const {
+	mockCount,
+	mockExists,
+	mockPing,
+	mockSearch,
+	mockCreate,
+	mockIndex,
+	mockRefresh,
+	mockUpdate,
+	mockDelete,
+	mockLogInfo,
+	ClientCtor,
+} = vi.hoisted(() =>
+{
+	const mockCount = vi.fn()
+	const mockExists = vi.fn()
+	const mockPing = vi.fn()
+	const mockSearch = vi.fn()
+	const mockCreate = vi.fn()
+	const mockIndex = vi.fn()
+	const mockRefresh = vi.fn()
+	const mockUpdate = vi.fn()
+	const mockDelete = vi.fn()
+	const mockLogInfo = vi.fn()
 
-describe('lib/util/search/SearchClient', () => {
-	// Test Subject
-	let client: SearchClient
-
-	// Test index name
-	const testIndex = 'search-client-index'
-
-	// Test content data
-	const content = {
-		id: 'test-content-id-goes-here',
-		title: 'Test Title',
-		subtitle: 'Test Subtitle',
-		body: 'Test Body',
-		slug: 'test-slug',
-		image: {
-			id: 'test-content-image-id',
-			title: 'test-content-image-id',
-			url: 'http://placehold.it/32x32',
-			description: 'test-content-image-description'
-		},
-		meta: {
-			publicationDate: '2001-12-12',
-			template: 'test-content-meta-template'
-		},
-		authors: {
-			id: 'test-author-id-goes-here',
-			name: 'Test Author Name',
-			slug: 'test-author-slug',
-			image: {
-				id: 'test-author-image-id-here',
-				title: 'Test Author Image Title',
-				url: 'http://placehold.it/32x32'
-			}
-		},
-		blog: {
-			id: 'test-blog-id-goes-here',
-			name: 'Test Blog Name',
-			slug: 'test-blog-slug',
-			image: {
-				id: 'test-blog-image-id-here',
-				title: 'Test Blog Image Title',
-				url: 'http://placehold.it/32x32'
-			}
-		},
-		category: {
-			id: 'test-category-id-goes-here',
-			name: 'Test Category Name',
-			slug: 'test-category-name',
-			image: {
-				id: 'test-category-image-goes-here',
-				title: 'Test Category Image Title',
-				url: 'http://placehold.it/32x32'
-			}
-		},
-		department: {
-			id: 'test-department-id-goes-here',
-			name: 'Test Department Name',
-			slug: 'test-department-slug',
-			image: {
-				id: 'test-department-image-id-here',
-				title: 'Test Department Image Title',
-				url: 'http://placehold.it/32x32'
-			}
-		},
-
-		issue: {
-			id: 'test-issue-id-goes-here',
-			slug: 'test-issue-slug',
-			publication: {
-				period: 'TestPeriod',
-				date: '2020-12-25'
-			},
-			image: {
-				id: 'test-issue-image-here',
-				title: 'Test Issue Image Title',
-				url: 'http://placehold.it/32x32'
-			}
-		},
-		tags: [
-			{
-				id: 'test-tag-1-id-here',
-				name: 'Test Tag 1 Name',
-				slug: 'test-tag-1-name',
-				image: {
-					id: 'test-tag-1-image-id',
-					title: 'Test Tag 1 Image Title',
-					url: 'http://placehold.it/32x32'
-				}
-			},
-			{
-				id: 'test-tag-2-id-here',
-				name: 'Test Tag 2 Name',
-				slug: 'test-tag-2-name',
-				image: {
-					id: 'test-tag-2-image-id',
-					title: 'Test Tag 2 Image Title',
-					url: 'http://placehold.it/32x32'
-				}
-			},
-			{
-				id: 'test-tag-3-id-here',
-				name: 'Test Tag 3 Name',
-				slug: 'test-tag-3-name',
-				image: {
-					id: 'test-tag-3-image-id',
-					title: 'Test Tag 3 Image Title',
-					url: 'http://placehold.it/32x32'
-				}
-			}
-		]
-	}
-
-	after(async () => {
-		// Clean up
-		if (await client.indexExists()) {
-			await client.deleteIndex()
+	const ClientCtor = vi.fn(function (this: Record<string, unknown>, opts: unknown)
+	{
+		this.opts = opts
+		this.count = mockCount
+		this.indices = {
+			exists: mockExists,
+			create: mockCreate,
+			refresh: mockRefresh,
+			delete: mockDelete,
 		}
+		this.ping = mockPing
+		this.search = mockSearch
+		this.index = mockIndex
+		this.update = mockUpdate
 	})
 
-	describe('constructor method', () => {
-		it('should create a new instance', async () => {
-			// Test
-			client = new SearchClient(testIndex)
+	return {
+		mockCount,
+		mockExists,
+		mockPing,
+		mockSearch,
+		mockCreate,
+		mockIndex,
+		mockRefresh,
+		mockUpdate,
+		mockDelete,
+		mockLogInfo,
+		ClientCtor,
+	}
+})
 
-			// Assertions
-			expect(client).to.be.an.instanceOf(SearchClient)
+vi.mock('@elastic/elasticsearch', () => ({
+	Client: ClientCtor,
+}))
+
+vi.mock('~/lib/util', () => ({
+	log: { info: mockLogInfo },
+}))
+
+import { SearchClient } from './SearchClient'
+
+describe('lib/util/search/SearchClient', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
+	})
+
+	describe('constructor', () =>
+	{
+		it('should store the index and instantiate the ES client', () =>
+		{
+			const client = new SearchClient('my-index')
+
+			expect(client.getIndex()).toBe('my-index')
+			expect(ClientCtor).toHaveBeenCalled()
+		})
+
+		it('should merge user options over defaults', () =>
+		{
+			new SearchClient('idx', { node: 'http://es:9200', maxRetries: 1 })
+
+			const opts = ClientCtor.mock.calls.at(-1)?.[0] as { node: string; maxRetries: number }
+			expect(opts.node).toBe('http://es:9200')
+			expect(opts.maxRetries).toBe(1)
 		})
 	})
 
-	describe('get & set index property methods', () => {
-		it('should set index property to value given', async () => {
-			const newTestIndexValue = testIndex + '-setter'
+	describe('index accessors', () =>
+	{
+		it('getSource should return the underlying ES client', () =>
+		{
+			const client = new SearchClient('idx')
+			expect(client.getSource()).toBeDefined()
+		})
 
-			// Test setter
-			client.setIndex(newTestIndexValue)
-
-			// Test getter
-			const result = client.getIndex()
-
-			// Clean up
-			client.setIndex(testIndex.replace('-setter', ''))
-
-			// Assertions
-			expect(result).to.equal(newTestIndexValue)
+		it('setIndex should change the active index', () =>
+		{
+			const client = new SearchClient('a')
+			client.setIndex('b')
+			expect(client.getIndex()).toBe('b')
 		})
 	})
 
-	describe('ping method', () => {
-		it('should return true', async () => {
-			// Test
-			const result = await client.ping()
+	describe('count', () =>
+	{
+		it('should return the count from the ES response', async () =>
+		{
+			mockCount.mockResolvedValue({ body: { count: 42 } })
 
-			// Assertions
-			expect(result).to.be.true
+			const client = new SearchClient('idx')
+			expect(await client.count()).toBe(42)
+			expect(mockCount).toHaveBeenCalledWith({ index: 'idx', body: {} })
 		})
 	})
 
-	describe('indexExists method', () => {
-		it('should return false', async () => {
-			// Test
-			const result = await client.indexExists()
+	describe('indexExists / ping', () =>
+	{
+		it('indexExists returns true when ES responds 200', async () =>
+		{
+			mockExists.mockResolvedValue({ statusCode: 200 })
 
-			// Assertions
-			expect(result).to.be.false
+			const client = new SearchClient('idx')
+			expect(await client.indexExists()).toBe(true)
+		})
+
+		it('indexExists returns false on non-200', async () =>
+		{
+			mockExists.mockResolvedValue({ statusCode: 404 })
+
+			const client = new SearchClient('idx')
+			expect(await client.indexExists()).toBe(false)
+		})
+
+		it('ping returns true on 200', async () =>
+		{
+			mockPing.mockResolvedValue({ statusCode: 200 })
+
+			const client = new SearchClient('idx')
+			expect(await client.ping()).toBe(true)
 		})
 	})
 
-	describe('create method', () => {
-		it('should create index and return true', async () => {
-			// Test
-			const result = await SearchClient.createIndex(testIndex, ContentSchema)
-
-			expect(result).to.be.true
-		})
-	})
-
-	describe('add method', () => {
-		it('should add data to index and return true', async () => {
-			// Test
-			const result = await client.add(content.id, content)
-
-			// Assertions
-			expect(result).to.be.true
-		})
-
-		it('should throw if index does not exist', async () => {
-			// Setup
-			const missingIndexClient = new SearchClient('missing-index-test')
-
-			// Assertions
-			expect(async function() {
-				await missingIndexClient.add('some-id-value', {})
-			}).to.throw
-		})
-	})
-
-	describe('search method is used on unrefreshed index data', () => {
-		it('should return null maxScore and empty data array', async () => {
-			// Test
-			const result = await client.search({
-				query: {
-					match: {
-						title: content.title
-					}
-				}
+	describe('search', () =>
+	{
+		it('should remap ES hits into the SearchResult envelope', async () =>
+		{
+			mockSearch.mockResolvedValue({
+				body: {
+					hits: {
+						max_score: 1.23,
+						hits: [
+							{ _id: 'a', _index: 'idx', _type: '_doc', _score: 1.0, _source: { v: 1 } },
+							{ _id: 'b', _index: 'idx', _type: '_doc', _score: 0.5, _source: { v: 2 } },
+						],
+					},
+				},
 			})
 
-			// Assertions
-			expect(result.maxScore).to.be.null
-			expect(result.data).to.be.empty
+			const client = new SearchClient('idx')
+			const result = await client.search<{ v: number }>({ query: { match_all: {} } })
+
+			expect(result.count).toBe(2)
+			expect(result.maxScore).toBe(1.23)
+			expect(result.data).toEqual([
+				{ id: 'a', index: 'idx', type: '_doc', score: 1.0, source: { v: 1 } },
+				{ id: 'b', index: 'idx', type: '_doc', score: 0.5, source: { v: 2 } },
+			])
 		})
 	})
 
-	describe('refresh method is used', () => {
-		it('should make newly added data searchable and return true', async () => {
-			// Test
-			const result = await client.refresh()
+	describe('add', () =>
+	{
+		it('should throw when the index does not exist', async () =>
+		{
+			mockExists.mockResolvedValue({ statusCode: 404 })
 
-			// Assertions
-			expect(result).to.be.true
+			const client = new SearchClient('idx')
+			await expect(client.add('id1', { v: 1 })).rejects.toThrow(/Missing index/)
+		})
+
+		it('should return true on a 201/created response', async () =>
+		{
+			mockExists.mockResolvedValue({ statusCode: 200 })
+			mockIndex.mockResolvedValue({ statusCode: 201, body: { result: 'created' } })
+
+			const client = new SearchClient('idx')
+			expect(await client.add('id1', { v: 1 })).toBe(true)
+		})
+
+		it('should return false on any non-created result', async () =>
+		{
+			mockExists.mockResolvedValue({ statusCode: 200 })
+			mockIndex.mockResolvedValue({ statusCode: 200, body: { result: 'updated' } })
+
+			const client = new SearchClient('idx')
+			expect(await client.add('id1', { v: 1 })).toBe(false)
 		})
 	})
 
-	describe('count method', () => {
-		it('should return a number equal to length of seed array', async () => {
-			// Test
-			const result = await client.count()
+	describe('refresh / deleteIndex', () =>
+	{
+		it('refresh returns true on 200', async () =>
+		{
+			mockRefresh.mockResolvedValue({ statusCode: 200 })
 
-			// Assertions
-			expect(result).to.equal(1)
+			const client = new SearchClient('idx')
+			expect(await client.refresh()).toBe(true)
+		})
+
+		it('deleteIndex returns true on 200+acknowledged', async () =>
+		{
+			mockDelete.mockResolvedValue({ statusCode: 200, body: { acknowledged: true } })
+
+			const client = new SearchClient('idx')
+			expect(await client.deleteIndex()).toBe(true)
+		})
+
+		it('deleteIndex returns false when not acknowledged', async () =>
+		{
+			mockDelete.mockResolvedValue({ statusCode: 200, body: { acknowledged: false } })
+
+			const client = new SearchClient('idx')
+			expect(await client.deleteIndex()).toBe(false)
 		})
 	})
 
-	describe('search is used on existing data', () => {
-		it('should return a maxScore value and matches', async () => {
-			// Test
-			const result = await client.search({
-				query: {
-					match: {
-						title: content.title
-					}
-				}
-			})
+	describe('update', () =>
+	{
+		it('returns true on updated', async () =>
+		{
+			mockUpdate.mockResolvedValue({ statusCode: 200, body: { result: 'updated' } })
 
-			// Assertions
-			expect(result.maxScore).to.not.be.null
-			expect(result.data).to.not.be.empty
+			const client = new SearchClient('idx')
+			expect(await client.update('id1', { v: 2 })).toBe(true)
+		})
+
+		it('logs info and returns false on noop', async () =>
+		{
+			mockUpdate.mockResolvedValue({ statusCode: 200, body: { result: 'noop' } })
+
+			const client = new SearchClient('idx')
+			const ok = await client.update('id1', { v: 2 })
+
+			expect(ok).toBe(false)
+			expect(mockLogInfo).toHaveBeenCalled()
 		})
 	})
 
-	describe('search is unable to find any matches', () => {
-		it('should return null maxScore and empty data array', async () => {
-			// Test
-			const result = await client.search({
-				query: {
-					match: {
-						title: 'does-not-exist'
-					}
-				}
-			})
+	describe('static createIndex', () =>
+	{
+		it('should construct its own ES client and return true on 200', async () =>
+		{
+			mockCreate.mockResolvedValue({ statusCode: 200 })
 
-			// Assertions
-			expect(result.maxScore).to.be.null
-			expect(result.data).to.be.empty
-		})
-	})
-
-	describe('update method is called on existing data', () => {
-		it('should return true', async () => {
-			// Find data to update
-			const search = await client.search({
-				query: {
-					match: {
-						title: content.title
-					}
-				}
-			})
-
-			// New data
-			const contentUpdate = { title: 'Some Specific Title' }
-
-			// Test
-			const result1 = await client.update(search.data[0].id, contentUpdate)
-
-			// Refresh index to make sure update takes effect
-			await client.refresh()
-
-			// Find data to update
-			const result2 = await client.search({
-				query: {
-					match: contentUpdate
-				}
-			})
-
-			// Assertions
-			expect(result1).to.be.true
-			expect(result2.data[0].source)
-				.to.have.property('title')
-				.equal(contentUpdate.title)
-		})
-	})
-
-	describe('deleteIndex method', () => {
-		it('should delete index and all data', async () => {
-			// Test
-			const result = await client.deleteIndex()
-
-			// Assertions
-			expect(result).to.be.true
+			const ok = await SearchClient.createIndex('new-idx', { title: { type: 'text' } })
+			expect(ok).toBe(true)
+			expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ index: 'new-idx' }))
 		})
 	})
 })

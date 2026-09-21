@@ -1,15 +1,22 @@
-import { TypeORMRepository as Repository, Query } from '~/lib/domain'
+import { PrismaRepository } from '~/lib/domain'
+import type {
+	Query,
+	PaginationQuery,
+	PaginatedResult,
+	CursorPaginationQuery,
+	CursorPaginatedResult,
+} from '~/lib/domain'
 
 export class DataService<T> {
 	/*
 	 * Repository
 	 */
-	protected repository: Repository<T>
+	protected repository: PrismaRepository<T>
 
 	/*
 	 * Construct
 	 */
-	constructor(repository: Repository<T>) {
+	constructor(repository: PrismaRepository<T>) {
 		this.repository = repository
 	}
 
@@ -17,43 +24,85 @@ export class DataService<T> {
 	 * Get
 	 */
 	public async get(query: Query<T> = {}): Promise<T[]> {
-		// Execute and return result
-		return await this.repository.get({ query })
+		// Execute
+		return await this.repository.get(query)
 	}
 
 	/*
-	 * Get
+	 * Get With Count
 	 */
 	public async getWithCount(query: Query<T> = {}): Promise<[T[], number]> {
-		// Execute and return result
-		return await this.repository.getWithCount({ query })
+		// Execute
+		return await this.repository.getWithCount(query)
+	}
+
+	/*
+	 * Paginate — offset-based
+	 */
+	public async paginate(query: Query<T> = {}, pagination: PaginationQuery = {}): Promise<PaginatedResult<T>>
+	{
+		// Execute
+		return await this.repository.paginate(query, pagination)
+	}
+
+	/*
+	 * Cursor Paginate — cursor-based
+	 */
+	public async cursorPaginate(query: Query<T> = {}, pagination: CursorPaginationQuery = {}): Promise<CursorPaginatedResult<T>>
+	{
+		// Execute
+		return await this.repository.cursorPaginate(query, pagination)
 	}
 
 	/*
 	 * Get One
 	 */
 	public async getOne(query: Query<T> = {}): Promise<T | undefined> {
-		return await this.repository.getOne({ query })
+		// Execute
+		return await this.repository.getOne(query)
 	}
 
 	/*
 	 * Create
 	 */
-	public async create(data: {}): Promise<T | undefined> {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	public async create(data: Record<string, any>): Promise<T | undefined> {
+		// Execute
 		return await this.repository.create(data)
 	}
 
 	/*
 	 * Update
 	 */
-	public async update(data: {}): Promise<T | undefined> {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	public async update(data: Record<string, any>): Promise<T | undefined> {
+		// Execute
 		return await this.repository.update(data)
 	}
 
 	/*
 	 * Delete
 	 */
-	public async delete(id: number | string): Promise<any> {
+	public async delete(id: number | string): Promise<boolean> {
+		// Execute
 		return await this.repository.delete(id)
+	}
+
+	/*
+	 * Restore — undo a soft delete
+	 */
+	public async restore(id: number | string): Promise<T | undefined>
+	{
+		// Execute
+		return await this.repository.restore(id)
+	}
+
+	/*
+	 * Force Delete — permanent removal
+	 */
+	public async forceDelete(id: number | string): Promise<boolean>
+	{
+		// Execute
+		return await this.repository.forceDelete(id)
 	}
 }

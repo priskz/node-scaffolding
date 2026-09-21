@@ -1,166 +1,169 @@
-import { expect } from 'chai'
-import { MockContent } from '~/test/mocks'
-import { Content, ContentCache } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-describe('app/domain/content/ContentCache', () => {
-	// Test Subject
-	let contentCache: ContentCache
+const mockGetRaw = vi.fn()
+const mockSet = vi.fn()
+const mockFindOneById = vi.fn()
 
-	// Test Source
-	const testSource = {
-		id: '278f39a6964f48d780de283c91663d3c',
-		title: 'Twitter says about 130 accounts were targeted in breach',
-		slug: 'twitter-says-130-accounts-targeted-in-breach'
-	}
+vi.mock('~/lib/util', () => ({
+	DefaultCache: class
+	{
+		protected prefix = ''
+		protected db = 0
+		public getRaw(id: string | number) { return mockGetRaw(id) }
+		public set(id: string | number, data: unknown) { return mockSet(id, data) }
+	},
+	DefaultSearch: class
+	{
+		public find() { return Promise.resolve({ data: [] }) }
+		public update() { return Promise.resolve(false) }
+		public refresh() { return Promise.resolve(true) }
+		public getClient() { return { getIndex: () => 'test' } }
+		public getSource() { return { updateByQuery: () => Promise.resolve({ statusCode: 200, body: {} }) } }
+	},
+	log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}))
 
-	// Test Content from source
-	let testContent: Content
+vi.mock('~/app/domain/content/ContentRepository', () => ({
+	ContentRepository: class { public findOneById(id: string) { return mockFindOneById(id) } },
+}))
 
-	before(async () => {
-		// Add seed data
-		await MockContent.addSeeds()
+import { ContentCache } from './ContentCache'
+
+describe('app/domain/content/ContentCache', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await contentCache.flush()
-
-		// Delete seed data
-		await MockContent.removeSeeds()
-	})
-
-	describe('constructor method', () => {
-		it('should create a new instance', async () => {
-			// Test
-			contentCache = new ContentCache()
-
-			// Assertions
-			expect(contentCache).to.be.an.instanceOf(ContentCache)
-		})
-	})
-
-	describe('getSource method', () => {
-		it('should return raw data from source', async () => {
-			// Test
-			testContent = (await contentCache.getSource(testSource.id)) as Content
-
-			// Assertions
-			expect(testContent.id).to.equal(testSource.id)
-			expect(testContent.title).to.equal(testSource.title)
-			expect(testContent.slug).to.equal(testSource.slug)
-		})
-
-		it('should return undefined if not found', async () => {
-			// Test
-			const result = (await contentCache.getSource('does-not-exist')) as Content
-
-			// Assertions
-			expect(result).to.be.undefined
+	describe('configuration', () =>
+	{
+		it('should use content prefix and db 3', () =>
+		{
+			const cache = new ContentCache()
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			expect((cache as any).prefix).toBe('content')
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			expect((cache as any).db).toBe(3)
 		})
 	})
 
-	describe('save method', () => {
-		it('should set given Content in cache and return true', async () => {
-			// Test
-			const result = await contentCache.save(testContent)
+	describe('fetch', () =>
+	{
+		it('should return parsed content when cache hit', async () =>
+		{
+			const content = { id: 'abc', title: 'Hello' }
+			mockGetRaw.mockResolvedValue(JSON.stringify(content))
 
-			// Assertions
-			expect(result).to.be.true
+			const cache = new ContentCache()
+			const result = await cache.fetch('abc')
+
+			expect(result).toEqual(content)
+			expect(mockFindOneById).not.toHaveBeenCalled()
 		})
 
-		it('when refresh param is true it should retrieve from source, set given Content in cache, and return true', async () => {
-			// Test
-			const result = await contentCache.save(testContent, true)
+		it('should load from source and cache when cache miss', async () =>
+		{
+			const content = { id: 'xyz', title: 'Fresh' }
+			mockGetRaw.mockResolvedValue(null)
+			mockFindOneById.mockResolvedValue(content)
+			mockSet.mockResolvedValue(true)
 
-			// Clean up
-			await contentCache.flush()
+			const cache = new ContentCache()
+			const result = await cache.fetch('xyz')
 
-			// Assertions
-			expect(result).to.be.true
+			expect(result).toEqual(content)
+			expect(mockSet).toHaveBeenCalledWith('xyz', JSON.stringify(content))
 		})
 
-		it('when refresh param is true and id does not exist in source it should return false', async () => {
-			// Mock
-			const missingContent = new Content()
+		it('should return undefined on cache miss with shouldCache=false', async () =>
+		{
+			mockGetRaw.mockResolvedValue(null)
 
-			// Set id
-			missingContent.id = 'content-id-does-not-exist'
+			const cache = new ContentCache()
+			const result = await cache.fetch('none', false)
 
-			// Test
-			const result = await contentCache.save(missingContent, true)
-
-			// Assertions
-			expect(result).to.be.false
-		})
-	})
-
-	describe('saveById method', () => {
-		it('should return true if found and set in cache', async () => {
-			// Test
-			const result = await contentCache.saveById(testSource.id)
-
-			// Clean up
-			await contentCache.flush()
-
-			// Assertions
-			expect(result).to.be.true
+			expect(result).toBeUndefined()
+			expect(mockFindOneById).not.toHaveBeenCalled()
 		})
 
-		it('should return false if not found in source', async () => {
-			// Test
-			const result = await contentCache.saveById(
-				'this-content-id-does-not-exist'
-			)
+		it('should return undefined when source miss', async () =>
+		{
+			mockGetRaw.mockResolvedValue(null)
+			mockFindOneById.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(result).to.be.false
+			const cache = new ContentCache()
+			const result = await cache.fetch('missing')
+
+			expect(result).toBeUndefined()
+			expect(mockSet).not.toHaveBeenCalled()
 		})
 	})
 
-	describe('fetch method', () => {
-		it('if optional param is false it should return undefined if not found in cache', async () => {
-			// Test
-			const result = await contentCache.fetch(testSource.id, false)
+	describe('saveById', () =>
+	{
+		it('should cache content looked up by id', async () =>
+		{
+			const content = { id: 'id1', title: 'T' }
+			mockFindOneById.mockResolvedValue(content)
+			mockSet.mockResolvedValue(true)
 
-			// Assertions
-			expect(result).to.be.undefined
+			const cache = new ContentCache()
+			const ok = await cache.saveById('id1')
+
+			expect(ok).toBe(true)
+			expect(mockSet).toHaveBeenCalledWith('id1', JSON.stringify(content))
 		})
 
-		it('if not in cache, should retrieve from source, add to cache, and return Content', async () => {
-			// Test
-			const result = (await contentCache.fetch(testSource.id)) as Content
+		it('should return false when content not found', async () =>
+		{
+			mockFindOneById.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(result.id).to.equal(testContent.id)
-			expect(result.title).to.equal(testContent.title)
-			expect(result.slug).to.equal(testContent.slug)
+			const cache = new ContentCache()
+			const ok = await cache.saveById('missing')
+
+			expect(ok).toBe(false)
+			expect(mockSet).not.toHaveBeenCalled()
+		})
+	})
+
+	describe('save', () =>
+	{
+		it('should cache the given content', async () =>
+		{
+			const content = { id: 'id2', title: 'Save' }
+			mockSet.mockResolvedValue(true)
+
+			const cache = new ContentCache()
+			const ok = await cache.save(content as never)
+
+			expect(ok).toBe(true)
+			expect(mockSet).toHaveBeenCalledWith('id2', JSON.stringify(content))
 		})
 
-		it('if in cache and optional cache param is false, it should return Content', async () => {
-			// Test
-			const result = (await contentCache.fetch(testSource.id, false)) as Content
+		it('should refresh from source when refresh=true', async () =>
+		{
+			const stale = { id: 'id3', title: 'Old' }
+			const fresh = { id: 'id3', title: 'New' }
+			mockFindOneById.mockResolvedValue(fresh)
+			mockSet.mockResolvedValue(true)
 
-			// Assertions
-			expect(result.id).to.equal(testContent.id)
-			expect(result.title).to.equal(testContent.title)
-			expect(result.slug).to.equal(testContent.slug)
+			const cache = new ContentCache()
+			const ok = await cache.save(stale as never, true)
+
+			expect(ok).toBe(true)
+			expect(mockSet).toHaveBeenCalledWith('id3', JSON.stringify(fresh))
 		})
 
-		it('if in cache and no optional param is given it should return Content', async () => {
-			// Test
-			const result = (await contentCache.fetch(testSource.id)) as Content
+		it('should return false when refresh finds no source', async () =>
+		{
+			mockFindOneById.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(result.id).to.equal(testContent.id)
-			expect(result.title).to.equal(testContent.title)
-			expect(result.slug).to.equal(testContent.slug)
-		})
+			const cache = new ContentCache()
+			const ok = await cache.save({ id: 'gone' } as never, true)
 
-		it('if source not found should return undefined', async () => {
-			// Test
-			const result = (await contentCache.fetch('does-not-exist')) as Content
-			// Assertions
-			expect(result).to.be.undefined
+			expect(ok).toBe(false)
+			expect(mockSet).not.toHaveBeenCalled()
 		})
 	})
 })

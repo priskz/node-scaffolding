@@ -1,285 +1,236 @@
-import { expect } from 'chai'
-import { Client } from './'
-import { DefaultCache } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { mockSelect, mockSet, mockGet, mockDel, mockKeys, mockInstance, mockLogError } =
+	vi.hoisted(() => ({
+		mockSelect: vi.fn(),
+		mockSet: vi.fn(),
+		mockGet: vi.fn(),
+		mockDel: vi.fn(),
+		mockKeys: vi.fn(),
+		mockInstance: vi.fn(),
+		mockLogError: vi.fn(),
+	}))
 
-describe('src/lib/util/cache/DefaultCache', () => {
-	// Test Subject
-	let defaultCache: DefaultCache
+vi.mock('./cache-client', () => ({
+	cacheClient: {
+		instance: mockInstance,
+	},
+}))
 
-	// Test bucket
-	const testBucket = 13
+vi.mock('~/lib/util/log', () => ({
+	log: { error: mockLogError },
+}))
 
-	// Test Prefix
-	const testPrefix = 'unit-test'
+import { DefaultCache } from './DefaultCache'
 
-	// Test time to live
-	const testTtl = 100
-
-	// Simple test object
-	const simpleObject: SimpleObject = {
-		id:
-			'test-' +
-			Math.random()
-				.toString(36)
-				.substring(2, 15),
-		firstName: 'Aaron',
-		lastName: 'Rodgers'
+describe('lib/util/cache/DefaultCache', () =>
+{
+	const fakeRedis = {
+		select: mockSelect,
+		set: mockSet,
+		get: mockGet,
+		del: mockDel,
+		keys: mockKeys,
 	}
 
-	after(async () => {
-		// Clean up
-		await defaultCache.client().dumpBucket()
-
-		// Disconnect client if isn't already
-		await defaultCache.client().disconnect()
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
+		mockInstance.mockReturnValue(fakeRedis)
+		mockSelect.mockResolvedValue('OK')
 	})
 
-	describe('constructor method', async () => {
-		it('should create a new instance', async () => {
-			// Test
-			defaultCache = new DefaultCache()
+	describe('set', () =>
+	{
+		it('should select the configured db and SET when no TTL', async () =>
+		{
+			mockSet.mockResolvedValue('OK')
 
-			// Assertions
-			expect(defaultCache).to.be.an.instanceOf(DefaultCache)
-		})
-	})
-
-	describe('constructor method is given optional config param', async () => {
-		it('should create a new instance', async () => {
-			// Test
-			const testDefaultCache = new DefaultCache({
-				client: new Client({ port: 8080 }),
-				bucket: 4,
-				prefix: 'optional-test-key',
-				ttl: 24
-			})
-
-			// Clean up
-			await testDefaultCache.client().disconnect()
-
-			// Assertions
-			expect(testDefaultCache).to.be.an.instanceOf(DefaultCache)
-		})
-	})
-
-	describe('client method', () => {
-		it('should return instance of Client', async () => {
-			// Test
-			const result = defaultCache.client()
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(Client)
-		})
-	})
-
-	describe('setBucket && getBucket methods', () => {
-		it('should set/get bucket property to value given', async () => {
-			// Set value
-			defaultCache.setBucket(testBucket)
-
-			// Test
-			const result = defaultCache.getBucket()
-
-			// Assertions
-			expect(result).to.equal(testBucket)
-		})
-	})
-
-	describe('setPrefix && getPrefix methods', () => {
-		it('should set/get bucket property to value given', async () => {
-			// Set value
-			defaultCache.setPrefix(testPrefix)
-
-			// Test
-			const result = defaultCache.getPrefix()
-
-			// Assertions
-			expect(result).to.equal(testPrefix)
-		})
-	})
-
-	describe('setTtl && getTtl methods', () => {
-		it('should set/get ttl property to value given', async () => {
-			// Set value
-			defaultCache.setTtl(testTtl)
-
-			// Test
-			const result = defaultCache.getTtl()
-
-			// Assertions
-			expect(result).to.equal(testTtl)
-		})
-	})
-
-	describe('parseKey method', () => {
-		it('should return predictably formatted cache key', async () => {
-			// Test value
-			const key = 12345
-
-			// Test
-			const result = defaultCache.parseKey(key)
-
-			// Assertions
-			expect(result).to.equal(`${testPrefix}:${key}`)
-		})
-	})
-
-	describe('set && get methods', () => {
-		it('should set && get value in cache for the key provided', async () => {
-			// Add to cache
-			await defaultCache.set(simpleObject.id, simpleObject)
-
-			// Test
-			const result = await defaultCache.get<SimpleObject>(simpleObject.id)
-
-			// Assertions
-			expect(result).to.be.like(simpleObject)
-		})
-	})
-
-	describe('get method throws invalid JSON error', () => {
-		it('should return null', async () => {
-			// Test data
-			const data = {
-				key: 'invalid-json-test',
-				value: '{test: value,}'
+			class TestCache extends DefaultCache {
+				protected prefix = 'test'
+				protected db = 2
 			}
+			const cache = new TestCache()
 
-			// Add to cache
-			await defaultCache.set(data.key, data.value)
+			const ok = await cache.set('abc', { hello: 'world' })
 
-			// Test
-			const result1 = await defaultCache.get<SimpleObject>(data.key)
+			expect(ok).toBe(true)
+			expect(mockSelect).toHaveBeenCalledWith(2)
+			expect(mockSet).toHaveBeenCalledWith('test:abc', JSON.stringify({ hello: 'world' }))
+		})
 
-			// Clean up
-			const result2 = await defaultCache.remove(data.key)
+		it('should pass through string values without re-serializing', async () =>
+		{
+			mockSet.mockResolvedValue('OK')
 
-			// Assertions
-			expect(result1).to.be.null
-			expect(result2).to.be.true
+			const cache = new DefaultCache({ prefix: 'x' })
+			await cache.set('k', 'raw-string')
+
+			expect(mockSet).toHaveBeenCalledWith('x:k', 'raw-string')
+		})
+
+		it('should use EX when TTL is configured', async () =>
+		{
+			mockSet.mockResolvedValue('OK')
+
+			const cache = new DefaultCache({ prefix: 'x', ttl: 60 })
+			await cache.set('k', 'v')
+
+			expect(mockSet).toHaveBeenCalledWith('x:k', 'v', 'EX', 60)
+		})
+
+		it('should return false and log when SET returns non-OK', async () =>
+		{
+			mockSet.mockResolvedValue(null)
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			const ok = await cache.set('k', 'v')
+
+			expect(ok).toBe(false)
+		})
+
+		it('should return false and log when stringify throws (circular ref)', async () =>
+		{
+			const cache = new DefaultCache({ prefix: 'x' })
+			const circular: Record<string, unknown> = {}
+			circular.self = circular
+
+			const ok = await cache.set('k', circular)
+
+			expect(ok).toBe(false)
+			expect(mockLogError).toHaveBeenCalled()
 		})
 	})
 
-	describe('getRaw method', () => {
-		it('should set && get value in cache for the key provided', async () => {
-			// Test
-			const result = await defaultCache.getRaw(simpleObject.id)
+	describe('getRaw / get', () =>
+	{
+		it('getRaw should return the raw string', async () =>
+		{
+			mockGet.mockResolvedValue('hello')
 
-			// Assertions
-			expect(result).to.not.be.like(simpleObject)
-			expect(result).to.equal(JSON.stringify(simpleObject))
+			const cache = new DefaultCache({ prefix: 'x' })
+			const value = await cache.getRaw('k')
+
+			expect(value).toBe('hello')
+			expect(mockGet).toHaveBeenCalledWith('x:k')
+		})
+
+		it('get should return null when key is missing', async () =>
+		{
+			mockGet.mockResolvedValue(null)
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			const value = await cache.get('k')
+
+			expect(value).toBeNull()
+		})
+
+		it('get should parse JSON when value is valid', async () =>
+		{
+			mockGet.mockResolvedValue(JSON.stringify({ a: 1 }))
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			const value = await cache.get<{ a: number }>('k')
+
+			expect(value).toEqual({ a: 1 })
+		})
+
+		it('get should return null when JSON is invalid', async () =>
+		{
+			mockGet.mockResolvedValue('not-json')
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			const value = await cache.get('k')
+
+			expect(value).toBeNull()
 		})
 	})
 
-	describe('remove method', () => {
-		it('should set && get value in cache for the key provided', async () => {
-			// Test
-			const result = await defaultCache.remove(simpleObject.id)
+	describe('remove', () =>
+	{
+		it('should DEL the prefixed key and return true on 1+ deletions', async () =>
+		{
+			mockDel.mockResolvedValue(1)
 
-			// Assertions
-			expect(result).to.be.true
+			const cache = new DefaultCache({ prefix: 'x' })
+			const ok = await cache.remove('k')
+
+			expect(ok).toBe(true)
+			expect(mockDel).toHaveBeenCalledWith('x:k')
+		})
+
+		it('should return false when nothing was deleted', async () =>
+		{
+			mockDel.mockResolvedValue(0)
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			const ok = await cache.remove('k')
+
+			expect(ok).toBe(false)
 		})
 	})
 
-	describe('keys method', () => {
-		it('should return all keys by default with given prefix and pattern', async () => {
-			// Test Data
-			const data = [
-				{
-					id:
-						'test-' +
-						Math.random()
-							.toString(36)
-							.substring(2, 15),
-					firstName: 'keys',
-					lastName: 'test'
-				},
-				{
-					id:
-						'test-' +
-						Math.random()
-							.toString(36)
-							.substring(2, 15),
-					firstName: 'keys',
-					lastName: 'test'
-				}
-			]
+	describe('keys / flush', () =>
+	{
+		it('keys() should scan with the prefix wildcard', async () =>
+		{
+			mockKeys.mockResolvedValue(['x:a', 'x:b'])
 
-			// Add data
-			await defaultCache.set('1', data[0])
-			await defaultCache.set('2', data[1])
+			const cache = new DefaultCache({ prefix: 'x' })
+			const result = await cache.keys()
 
-			// Test
-			const result1 = await defaultCache.keys()
-			const result2 = await defaultCache.get<SimpleObject>('1')
-			const result3 = await defaultCache.get<SimpleObject>('2')
+			expect(mockKeys).toHaveBeenCalledWith('x:*')
+			expect(result).toEqual(['x:a', 'x:b'])
+		})
 
-			// Assertions
-			expect(result1.length).to.equal(data.length)
-			expect(result2)
-				.to.have.property('id')
-				.equal(data[0].id)
-			expect(result3)
-				.to.have.property('id')
-				.equal(data[1].id)
+		it('flush() should return true when there are no matching keys', async () =>
+		{
+			mockKeys.mockResolvedValue([])
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			const ok = await cache.flush()
+
+			expect(ok).toBe(true)
+			expect(mockDel).not.toHaveBeenCalled()
+		})
+
+		it('flush() should DEL all matching keys', async () =>
+		{
+			mockKeys.mockResolvedValue(['x:a', 'x:b'])
+			mockDel.mockResolvedValue(2)
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			const ok = await cache.flush()
+
+			expect(ok).toBe(true)
+			expect(mockDel).toHaveBeenCalledWith('x:a', 'x:b')
+		})
+
+		it('flush(pattern) should honor an explicit pattern', async () =>
+		{
+			mockKeys.mockResolvedValue(['foo:1'])
+			mockDel.mockResolvedValue(1)
+
+			const cache = new DefaultCache({ prefix: 'x' })
+			await cache.flush('foo:*')
+
+			expect(mockKeys).toHaveBeenCalledWith('foo:*')
+			expect(mockDel).toHaveBeenCalledWith('foo:1')
 		})
 	})
 
-	describe('flush method', () => {
-		it('should remove all key-value-pairs based on prefix & bucket property', async () => {
-			// Set prefix for this test
-			defaultCache.setPrefix('FLUSHTEST')
-
-			// Add data
-			await defaultCache.set('1', 'FLUSHTESTVALUE1')
-			await defaultCache.set('2', 'FLUSHTESTVALUE2')
-
-			// Count keys pre test
-			const result1 = await defaultCache.keys()
-
-			// Test
-			const result2 = await defaultCache.flush()
-
-			// Count keys post test
-			const result3 = await defaultCache.keys()
-
-			// Assertions
-			expect(result1.length).to.equal(2)
-			expect(result2).to.be.true
-			expect(result3.length).to.equal(0)
+	describe('parseKey', () =>
+	{
+		it('should prefix with colon separator', () =>
+		{
+			const cache = new DefaultCache({ prefix: 'user' })
+			expect(cache.parseKey(42)).toBe('user:42')
 		})
-	})
 
-	describe('flush method w/optional pattern', () => {
-		it('should remove all key-value-pairs based on pattern given', async () => {
-			// Set prefix for this test
-			defaultCache.setPrefix('PATTERNTEST')
-
-			// Add data
-			await defaultCache.set('1', 'PATTERNTEST1')
-			await defaultCache.set('2', 'PATTERNTEST2')
-
-			// Count keys pre test
-			const result1 = await defaultCache.keys()
-
-			// Test
-			const result2 = await defaultCache.flush('*PATTERNTEST*')
-
-			// Count keys post test
-			const result3 = await defaultCache.keys()
-
-			// Assertions
-			expect(result1.length).to.equal(2)
-			expect(result2).to.be.true
-			expect(result3.length).to.equal(0)
+		it('should return id-as-string when no prefix configured', () =>
+		{
+			const cache = new DefaultCache()
+			expect(cache.parseKey('bare')).toBe('bare')
 		})
 	})
 })
-
-interface SimpleObject {
-	id: string
-	firstName: string
-	lastName: string
-}

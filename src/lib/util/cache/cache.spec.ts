@@ -1,47 +1,77 @@
-import { expect } from 'chai'
-import { cache } from './'
-import { Client } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { mockConnect, mockDisconnect, mockConnected, mockInstance, mockClientConnect } =
+	vi.hoisted(() => ({
+		mockConnect: vi.fn(),
+		mockDisconnect: vi.fn(),
+		mockConnected: vi.fn(),
+		mockInstance: vi.fn(),
+		mockClientConnect: vi.fn(),
+	}))
 
-describe('util/cache', () => {
-	describe('when connect function is called', () => {
-		it('should return true', async () => {
-			// Test
-			const result = await cache.connect()
+vi.mock('./cache-client', () => ({
+	cacheClient: {
+		connect: mockConnect,
+		disconnect: mockDisconnect,
+		connected: mockConnected,
+		instance: mockInstance,
+	},
+}))
 
-			// Assertions
-			expect(result).to.be.true
+import { cache } from './cache'
+
+describe('lib/util/cache/cache — facade', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
+	})
+
+	describe('connect', () =>
+	{
+		it('should call cacheClient.connect, wait for connection, and return connected()', async () =>
+		{
+			const fakeClient = { connect: mockClientConnect }
+			mockConnect.mockReturnValue(fakeClient)
+			mockClientConnect.mockResolvedValue(undefined)
+			mockConnected.mockResolvedValue(true)
+
+			const ok = await cache.connect({ host: 'redis', port: 6379 })
+
+			expect(mockConnect).toHaveBeenCalledWith({ host: 'redis', port: 6379 })
+			expect(mockClientConnect).toHaveBeenCalled()
+			expect(ok).toBe(true)
+		})
+
+		it('should return false when cacheClient reports not-connected', async () =>
+		{
+			mockConnect.mockReturnValue({ connect: mockClientConnect })
+			mockClientConnect.mockResolvedValue(undefined)
+			mockConnected.mockResolvedValue(false)
+
+			const ok = await cache.connect()
+
+			expect(ok).toBe(false)
 		})
 	})
 
-	describe('when disconnect function is called', () => {
-		it('should return true', async () => {
-			// Test
-			const result = await cache.disconnect()
+	describe('disconnect', () =>
+	{
+		it('should delegate to cacheClient.disconnect', async () =>
+		{
+			mockDisconnect.mockResolvedValue(undefined)
 
-			// Assertions
-			expect(result).to.be.true
+			await cache.disconnect()
+
+			expect(mockDisconnect).toHaveBeenCalled()
 		})
 	})
 
-	describe('when disconnect function is called but already disconnected', () => {
-		it('should return false', async () => {
-			// Test
-			const result = await cache.disconnect()
-
-			// Assertions
-			expect(result).to.be.false
-		})
-	})
-
-	describe('when client function is called', () => {
-		it('should return global Client instance', async () => {
-			// Test
-			const result = cache.client()
-
-			// Assertions
-			expect(result).to.be.instanceOf(Client)
+	describe('client', () =>
+	{
+		it('should expose cacheClient.instance as client', () =>
+		{
+			expect(cache.client).toBe(mockInstance)
 		})
 	})
 })

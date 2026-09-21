@@ -11,3 +11,4 @@
 .env*
 !.env.example
 !.env.prod.example
+/src/generated/prisma

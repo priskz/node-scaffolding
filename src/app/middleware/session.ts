@@ -33,7 +33,7 @@ export function getAgent(req: Request): string {
  */
 export function isExpired(model: SessionModel): boolean {
 	// Parse time object
-	const expiresAt = time.parse(model.expiresAt)
+	const expiresAt = model.expiresAt ? time.parse(model.expiresAt) : undefined
 
 	// Expiration defined?
 	if (!expiresAt) return false
@@ -105,7 +105,7 @@ export async function session(
 
 		// Add session cookie to response
 		res.cookie(config.session.cookie, session.id, {
-			expires: session.expiresAt,
+			expires: session.expiresAt ?? undefined,
 			sameSite: 'strict',
 			signed: true
 		})

@@ -1,121 +1,82 @@
-import { expect } from 'chai'
-import { AxiosResponse } from 'axios'
-import { appRequest } from '~/test/util'
-import { MockContent } from '~/test/mocks'
-import { ContentCache, ContentSchema } from '~/app/domain'
-import { SearchClient } from '~/lib/util'
-import { config } from '~/config'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Data -----//
+const { mockUpdateSearchIndex } = vi.hoisted(() => ({
+	mockUpdateSearchIndex: vi.fn(),
+}))
 
-// Test index name
-const index = 'search-update-api-test-index'
+vi.mock('~/lib/util', () => ({
+	respond: (_req: unknown, res: { status: (n: number) => unknown; json: (d: unknown) => unknown }) => ({
+		success: (data?: unknown, code: number = 200) =>
+		{
+			res.status(code === 200 && data === undefined ? 204 : code)
+			res.json(data)
+		},
+		error: (data?: unknown, code: number = 400) =>
+		{
+			res.status(code)
+			res.json(data)
+		},
+	}),
+}))
 
-// Search Client
-let client: SearchClient
+vi.mock('~/app/service/data', () => ({
+	ContentService: class
+	{
+		public updateSearchIndex(id: string) { return mockUpdateSearchIndex(id) }
+	},
+}))
 
-// Store original config value
-const defaultSearchIndex = config.search.index.default
+import { update } from './update'
+import type { Request, Response } from 'express'
 
-// Test Cache
-let contentCache: ContentCache
-
-// Test Source
-const testSource = {
-	id: '278f39a6964f48d780de283c91663d3c',
-	title: 'Twitter says about 130 accounts were targeted in breach',
-	slug: 'twitter-says-130-accounts-targeted-in-breach'
+function mockRes()
+{
+	return {
+		status: vi.fn().mockReturnThis(),
+		json: vi.fn().mockReturnThis(),
+	}
 }
 
-//----- Tests -----//
-
-describe('app/api/search/update', () => {
-	before(async () => {
-		// Add seed data
-		await MockContent.addSeeds()
-
-		// Init cache
-		contentCache = new ContentCache()
-
-		// Change config value for tests
-		config.search.index.default = index
-
-		// Create client
-		client = new SearchClient(index)
-
-		// Create test index
-		await SearchClient.createIndex(index, ContentSchema)
-
-		// Get seed data
-		const seeds = MockContent.getSeeds()
-
-		// Add seed data
-		for (let i = 0; i < seeds.length; i++) {
-			await client.add(seeds[i].id as string, {
-				...seeds[i],
-				title: 'Can Be Updated'
-			})
-		}
-
-		// Refresh index
-		await client.refresh()
+describe('app/api/search/update', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Revert updated config value
-		config.search.index.default = defaultSearchIndex
+	it('should error on invalid params', async () =>
+	{
+		const req = { params: { type: 'unknown', id: 'id1' } }
+		const res = mockRes()
 
-		// Clean up
-		await client.deleteIndex()
-		await contentCache.flush()
+		await update(req as unknown as Request, res as unknown as Response)
 
-		// Delete seed data
-		await MockContent.removeSeeds()
+		expect(res.status).toHaveBeenCalledWith(400)
+		expect(mockUpdateSearchIndex).not.toHaveBeenCalled()
 	})
 
-	describe('valid input provided', () => {
-		it('source changed, should return 204 No Content', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.put(
-				`/search/content/${testSource.id}`
-			)
+	it('should respond 204 on successful content update', async () =>
+	{
+		mockUpdateSearchIndex.mockResolvedValue(true)
 
-			// Assertions
-			expect(result.status).to.equal(204)
-		})
+		const req = { params: { type: 'content', id: 'id1' } }
+		const res = mockRes()
+
+		await update(req as unknown as Request, res as unknown as Response)
+
+		expect(mockUpdateSearchIndex).toHaveBeenCalledWith('id1')
+		expect(res.status).toHaveBeenCalledWith(204)
 	})
 
-	describe('valid input for unchanged source provided', () => {
-		it('should return 400', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.put(
-				`/search/content/${testSource.id}`
-			)
+	it('should error when update returns false', async () =>
+	{
+		mockUpdateSearchIndex.mockResolvedValue(false)
 
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
-	})
+		const req = { params: { type: 'content', id: 'id1' } }
+		const res = mockRes()
 
-	describe('invalid type input', () => {
-		it('required|in should return 400 Bad Request', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.put(
-				'/search/invalid/some-valid-id'
-			)
+		await update(req as unknown as Request, res as unknown as Response)
 
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
-	})
-
-	describe('invalid id input', () => {
-		it('required should return 404 Not Found', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.put('/search/content')
-
-			// Assertions
-			expect(result.status).to.equal(404)
-		})
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 })

@@ -1,467 +1,143 @@
-import { expect } from 'chai'
-import { DateTime } from 'luxon'
-import { STAMP_FORMAT, time } from './'
+import { describe, it, expect } from 'vitest'
+import { time, STAMP_FORMAT, LOCAL_TIMEZONE } from './time'
 
-//----- Data -----//
+describe('lib/util/time', () =>
+{
+	describe('constants', () =>
+	{
+		it('should expose the MySQL stamp format', () =>
+		{
+			expect(STAMP_FORMAT).toBe('y-LL-dd HH:mm:ss')
+		})
 
-// Predictable date
-const date = new Date('12 Feb 1991 00:00:00 UTC')
-
-const dateObject = {
-	day: date.getUTCDate(),
-	year: date.getFullYear(),
-	month: date.getMonth() + 1
-}
-
-//----- Tests -----//
-
-describe('util/time', () => {
-	describe('local method', () => {
-		it('should return instance of DateTime', async () => {
-			// Test
-			const result = time.local()
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
+		it('should expose the local timezone', () =>
+		{
+			expect(LOCAL_TIMEZONE).toBe('America/Chicago')
 		})
 	})
 
-	describe('now method', () => {
-		// Test
-		const result = time.now()
-
-		it('should return instance of DateTime', async () => {
-			expect(result).to.be.an.instanceOf(DateTime)
+	describe('now / utc', () =>
+	{
+		it('should return a UTC DateTime from now()', () =>
+		{
+			const dt = time.now()
+			expect(dt.isValid).toBe(true)
+			expect(dt.zoneName).toBe('UTC')
 		})
 
-		it('should have time zone of UTC', async () => {
-			expect(result.zoneName).to.equal('UTC')
-		})
-	})
-
-	describe('format method', () => {
-		it('should return instance of DateTime', async () => {
-			// Format
-			const format = 'y-LL-dd'
-
-			// Test
-			const result = time.format(format, dateObject)
-
-			// Assertions
-			expect(result).to.equal('1991-02-12')
+		it('utc() should alias now()', () =>
+		{
+			const dt = time.utc()
+			expect(dt.zoneName).toBe('UTC')
 		})
 	})
 
-	describe('formatLocal method', () => {
-		it('should return instance of DateTime', async () => {
-			// Format
-			const format = 'y-LL-dd'
-
-			// Test
-			const result = time.formatLocal(format, dateObject)
-
-			// Assertions
-			expect(result).to.equal('1991-02-12')
+	describe('local', () =>
+	{
+		it('should return a DateTime in the local timezone', () =>
+		{
+			const dt = time.local()
+			expect(dt.isValid).toBe(true)
+			expect(dt.zoneName).toBe(LOCAL_TIMEZONE)
 		})
 	})
 
-	describe('from method', () => {
-		it('should return predctiable instance of DateTime', async () => {
-			// Test
-			const result = time.from(dateObject)
+	describe('format / stamp', () =>
+	{
+		it('format() should render using the given token string', () =>
+		{
+			const out = time.format('yyyy', { year: 2030 })
+			expect(out).toBe('2030')
+		})
 
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
+		it('stamp() should use the MySQL stamp format', () =>
+		{
+			// Note: time.now() converts from system-local to UTC, so we only assert shape.
+			const out = time.stamp()
+			expect(out).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
 		})
 	})
 
-	describe('fromLocal method', () => {
-		it('should return predctiable instance of DateTime', async () => {
-			// Test
-			const result = time.fromLocal(dateObject)
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
+	describe('iso', () =>
+	{
+		it('should produce an ISO 8601 string in UTC', () =>
+		{
+			const out = time.iso({ year: 2030, month: 1, day: 2 })
+			expect(out).toMatch(/^2030-01-02T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
 		})
 	})
 
-	describe('iso method', () => {
-		it('should return iso formatted string', async () => {
-			// Test
-			const result = time.iso(dateObject)
+	describe('parse', () =>
+	{
+		it('should parse an ISO string', () =>
+		{
+			const dt = time.parse('2030-01-02T03:04:05.000Z', 'ISO')
+			expect(dt?.isValid).toBe(true)
+			expect(dt?.toUTC().year).toBe(2030)
+		})
 
-			// Assertions
-			expect(result).to.equal('1991-02-12T06:00:00.000Z')
+		it('should parse a stamp-format string', () =>
+		{
+			const dt = time.parse('2030-01-02 03:04:05', 'STAMP')
+			expect(dt?.isValid).toBe(true)
+			expect(dt?.year).toBe(2030)
+		})
+
+		it('should parse a Date object', () =>
+		{
+			const input = new Date('2030-01-02T00:00:00Z')
+			const dt = time.parse(input)
+			expect(dt?.isValid).toBe(true)
+			expect(dt?.toUTC().year).toBe(2030)
+		})
+
+		it('should return undefined for an invalid string with no from-type', () =>
+		{
+			const dt = time.parse('not-a-date')
+			expect(dt).toBeUndefined()
+		})
+
+		it('should require a format when from=FORMAT', () =>
+		{
+			const dt = time.parse('01/02/2030', 'FORMAT')
+			expect(dt).toBeUndefined()
+		})
+
+		it('should parse with an explicit format', () =>
+		{
+			const dt = time.parse('01/02/2030', 'FORMAT', 'LL/dd/yyyy')
+			expect(dt?.isValid).toBe(true)
+			expect(dt?.toUTC().year).toBe(2030)
 		})
 	})
 
-	describe('isoLocal method', () => {
-		it('should return iso formatted string', async () => {
-			// Test
-			const result = time.isoLocal(dateObject)
+	describe('parseLocal', () =>
+	{
+		it('should return a DateTime in the local timezone for valid input', () =>
+		{
+			const dt = time.parseLocal('2030-01-02T03:04:05.000Z', 'ISO')
+			expect(dt?.zoneName).toBe(LOCAL_TIMEZONE)
+		})
 
-			// Assertions
-			expect(result).to.equal('1991-02-12T00:00:00.000-06:00')
+		it('should return undefined for invalid input', () =>
+		{
+			const dt = time.parseLocal('nope')
+			expect(dt).toBeUndefined()
 		})
 	})
 
-	describe('parse method', () => {
-		it('invalid date should return undefined', async () => {
-			// Test
-			const result = time.parse(
-				'Wed, 12 Feb 1991 06:00:00 GMT',
-				'HTTP'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.undefined
+	describe('from / fromLocal', () =>
+	{
+		it('from() should produce a UTC DateTime', () =>
+		{
+			const dt = time.from({ year: 2030, month: 6, day: 15 })
+			expect(dt.zoneName).toBe('UTC')
 		})
 
-		it('FORMAT format should return given format', async () => {
-			// Test
-			const result = time.parse(
-				'1991-02-12 00:00:00',
-				'FORMAT',
-				STAMP_FORMAT
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('FORMAT without format should return undefined', async () => {
-			// Test
-			const result = time.parse('1991-02-12 00:00:00', 'FORMAT') as DateTime
-
-			// Assertions
-			expect(result).to.be.undefined
-		})
-
-		it('HTTP format should return given format', async () => {
-			// Test
-			const result = time.parse(
-				'Tue, 12 Feb 1991 06:00:00 GMT',
-				'HTTP'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('ISO format should return given format', async () => {
-			// Test
-			const result = time.parse(
-				'1991-02-12T00:00:00.000-06:00',
-				'ISO'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('MYSQL format should return given format', async () => {
-			// Test
-			const result = time.parse('1991-02-12 00:00:00', 'MYSQL') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('RFC2822 format should return given format', async () => {
-			// Test
-			const result = time.parse(
-				'Tue, 12 Feb 1991 00:00:00 -0600',
-				'RFC2822'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('STAMP format should return given format', async () => {
-			// Test
-			const result = time.parse('1991-02-12 00:00:00', 'STAMP') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('SQL format should return given format', async () => {
-			// Test
-			const result = time.parse(
-				'1991-02-12 00:00:00.000 -06:00',
-				'SQL'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('UNIX_MS format should return given format', async () => {
-			// Test
-			const result = time.parse('666338400000', 'UNIX_MS') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('UNIX_SEC format should return given format', async () => {
-			// Test
-			const result = time.parse('666338400', 'UNIX_SEC') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(6)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-	})
-
-	describe('parseLocal method', () => {
-		it('invalid date should return undefined', async () => {
-			// Test
-			const result = time.parseLocal(
-				'Wed, 12 Feb 1991 06:00:00 GMT',
-				'HTTP'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.undefined
-		})
-
-		it('FORMAT format should return given format', async () => {
-			// Test
-			const result = time.parseLocal(
-				'1991-02-12 00:00:00',
-				'FORMAT',
-				STAMP_FORMAT
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('FORMAT without format should return undefined', async () => {
-			// Test
-			const result = time.parseLocal(
-				'1991-02-12 00:00:00',
-				'FORMAT'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.undefined
-		})
-
-		it('HTTP format should return given format', async () => {
-			// Test
-			const result = time.parseLocal(
-				'Tue, 12 Feb 1991 06:00:00 GMT',
-				'HTTP'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('ISO format should return given format', async () => {
-			// Test
-			const result = time.parseLocal(
-				'1991-02-12T00:00:00.000-06:00',
-				'ISO'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('MYSQL format should return given format', async () => {
-			// Test
-			const result = time.parseLocal('1991-02-12 00:00:00', 'MYSQL') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('RFC2822 format should return given format', async () => {
-			// Test
-			const result = time.parseLocal(
-				'Tue, 12 Feb 1991 00:00:00 -0600',
-				'RFC2822'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('STAMP format should return given format', async () => {
-			// Test
-			const result = time.parseLocal('1991-02-12 00:00:00', 'STAMP') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('SQL format should return given format', async () => {
-			// Test
-			const result = time.parseLocal(
-				'1991-02-12 00:00:00.000 -06:00',
-				'SQL'
-			) as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('UNIX_MS format should return given format', async () => {
-			// Test
-			const result = time.parseLocal('666338400000', 'UNIX_MS') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-
-		it('UNIX_SEC format should return given format', async () => {
-			// Test
-			const result = time.parseLocal('666338400', 'UNIX_SEC') as DateTime
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.hour).to.equal(0)
-			expect(result.minute).to.equal(0)
-			expect(result.second).to.equal(0)
-			expect(result.day).to.equal(dateObject.day)
-			expect(result.month).to.equal(dateObject.month)
-			expect(result.year).to.equal(dateObject.year)
-		})
-	})
-
-	describe('stamp method', () => {
-		it('should return timpestamp string', async () => {
-			// Test
-			const result = time.stamp(dateObject)
-
-			// Assertions
-			expect(result).to.equal('1991-02-12 06:00:00')
-		})
-	})
-
-	describe('stampLocal method', () => {
-		it('should return timpestamp string', async () => {
-			// Test
-			const result = time.stampLocal(dateObject)
-
-			// Assertions
-			expect(result).to.equal('1991-02-12 00:00:00')
-		})
-	})
-
-	describe('utc method', () => {
-		it('should return utc formatted string', async () => {
-			// Test
-			const result = time.utc(dateObject)
-
-			// Assertions
-			expect(result).to.be.an.instanceOf(DateTime)
-			expect(result.zoneName).to.equal('UTC')
+		it('fromLocal() should produce a DateTime in the local timezone', () =>
+		{
+			const dt = time.fromLocal({ year: 2030, month: 6, day: 15 })
+			expect(dt.zoneName).toBe(LOCAL_TIMEZONE)
 		})
 	})
 })

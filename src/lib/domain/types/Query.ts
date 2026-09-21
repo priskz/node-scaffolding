@@ -14,4 +14,5 @@ export interface Query<T> {
 	embed?: string[]
 	skip?: number
 	take?: number
+	withTrashed?: boolean
 }

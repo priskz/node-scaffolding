@@ -1,48 +1,40 @@
-import { expect } from 'chai'
-import { search } from './'
-import { SearchClient } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { SearchClientCtor } = vi.hoisted(() => ({
+	SearchClientCtor: vi.fn(),
+}))
 
-describe('lib/util/search', () => {
-	describe('when client function is called prior to init', () => {
-		it('should return undefined', async () => {
-			// Test
-			const result = await search.client()
+vi.mock('./SearchClient', () => ({
+	SearchClient: SearchClientCtor,
+}))
 
-			// Assertions
-			expect(result).to.be.undefined
-		})
+import { search } from './search'
+
+describe('lib/util/search/search — facade', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
+		// search.ts module keeps module-level `instance` — each test file is its
+		// own module graph so re-importing elsewhere would reset, but within this
+		// file we need to track the "already initialized" path explicitly.
 	})
 
-	describe('when init function is called', () => {
-		it('should return true', async () => {
-			// Test
-			const result = await search.init()
-
-			// Assertions
-			expect(result).to.be.true
-		})
+	it('init() should create the global SearchClient once and return true', async () =>
+	{
+		const ok = await search.init()
+		expect(ok).toBe(true)
+		expect(SearchClientCtor).toHaveBeenCalledWith('global-index', {})
 	})
 
-	describe('when init function has alreay been called more than once', () => {
-		it('should return false', async () => {
-			// Test
-			const result = await search.init()
-
-			// Assertions
-			expect(result).to.be.false
-		})
+	it('client() should return the initialized instance', () =>
+	{
+		expect(search.client()).toBeDefined()
 	})
 
-	describe('when client function is called', () => {
-		it('should return global Client instance', async () => {
-			// Test
-			const result = search.client()
-
-			// Assertions
-			expect(result).to.be.instanceOf(SearchClient)
-			expect(result.getIndex()).to.equal('global-index')
-		})
+	it('init() should refuse re-initialization', async () =>
+	{
+		const ok = await search.init()
+		expect(ok).toBe(false)
 	})
 })

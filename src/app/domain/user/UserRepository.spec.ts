@@ -1,18 +1,26 @@
-import { expect } from 'chai'
-import { getCustomRepository } from 'typeorm'
-import { UserRepository } from './'
+import { describe, it, expect } from 'vitest'
+import { UserRepository } from './UserRepository'
+import { PrismaRepository } from '~/lib/domain'
 
-describe('app/domain/user/UserRepository', () => {
-	// Unit
-	let repository: UserRepository
+describe('app/domain/user/UserRepository', () =>
+{
+	it('should extend PrismaRepository', () =>
+	{
+		const repo = new UserRepository()
+		expect(repo).toBeInstanceOf(PrismaRepository)
+	})
 
-	describe('constructor method', () => {
-		it('should return new instance of UserRepository', async () => {
-			// Test
-			repository = getCustomRepository(UserRepository)
+	it('should target the user model', () =>
+	{
+		const repo = new UserRepository()
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		expect((repo as any).modelName).toBe('user')
+	})
 
-			// Assertions
-			expect(repository).to.be.an.instanceOf(UserRepository)
-		})
+	it('should enable soft deletes', () =>
+	{
+		const repo = new UserRepository()
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		expect((repo as any).softDeletes).toBe(true)
 	})
 })

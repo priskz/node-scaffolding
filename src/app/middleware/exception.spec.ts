@@ -1,54 +1,76 @@
-import { expect } from 'chai'
-import { AxiosResponse } from 'axios'
-import { appRequest } from '~/test/util'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { mockLogWarn, mockLogError } = vi.hoisted(() => ({
+	mockLogWarn: vi.fn(),
+	mockLogError: vi.fn(),
+}))
 
-describe('middleware/exception', () => {
-	// ENV start value
-	const debugMode = process.env.DEBUG_MODE
+vi.mock('~/lib/util', async (importOriginal) =>
+{
+	const actual = await importOriginal<typeof import('~/lib/util')>()
+	return {
+		...actual,
+		log: { warn: mockLogWarn, error: mockLogError },
+		env: { DEBUG_MODE: false },
+	}
+})
 
-	describe('error is thrown', () => {
-		it('should catch error, log, handle gracefully, and return 500', async () => {
-			// Test
-			const result: AxiosResponse = await appRequest.post('/error')
+import { exception } from './exception'
+import { AppError } from '~/lib/error'
+import type { Request, Response, NextFunction } from 'express'
 
-			// Assertions
-			expect(result.status).to.equal(500)
-		})
+function mockResponse(): Response
+{
+	const res: Partial<Response> = {
+		status: vi.fn().mockReturnThis() as unknown as Response['status'],
+		json: vi.fn().mockReturnThis() as unknown as Response['json'],
+	}
+	return res as Response
+}
+
+describe('app/middleware/exception', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	describe('error is thrown while env DEBUG_MODE true', () => {
-		it('should return 500 with detail in body', async () => {
-			// Set env
-			process.env.DEBUG_MODE = 'true'
+	it('should respond with structured JSON for AppError (non-500)', async () =>
+	{
+		const res = mockResponse()
+		const err = new AppError('Bad input', 400, 'BAD_INPUT')
 
-			// Test
-			const result: AxiosResponse = await appRequest.post('/error')
+		await exception(err, {} as Request, res, (() => {}) as NextFunction)
 
-			// Clean Up
-			process.env.DEBUG_MODE = debugMode
-
-			// Assertions
-			expect(result.status).to.equal(500)
-			expect(result.data).to.not.be.empty
-		})
+		expect(res.status).toHaveBeenCalledWith(400)
+		expect(res.json).toHaveBeenCalledWith(err.toJSON())
+		expect(mockLogWarn).toHaveBeenCalled()
+		expect(mockLogError).not.toHaveBeenCalled()
 	})
 
-	describe('error is thrown while env DEBUG_MODE false', () => {
-		it('should return 500 with empty body', async () => {
-			// Set env
-			process.env.DEBUG_MODE = 'false'
+	it('should log at error level for AppError with 5xx status', async () =>
+	{
+		const res = mockResponse()
+		const err = new AppError('boom', 502, 'UPSTREAM')
 
-			// Test
-			const result: AxiosResponse = await appRequest.post('/error')
+		await exception(err, {} as Request, res, (() => {}) as NextFunction)
 
-			// Clean Up
-			process.env.DEBUG_MODE = debugMode
+		expect(res.status).toHaveBeenCalledWith(502)
+		expect(mockLogError).toHaveBeenCalled()
+	})
 
-			// Assertions
-			expect(result.status).to.equal(500)
-			expect(result.data).to.be.empty
+	it('should respond with generic 500 for unstructured errors when DEBUG_MODE is off', async () =>
+	{
+		const res = mockResponse()
+		const err = new Error('exploded')
+
+		await exception(err, {} as Request, res, (() => {}) as NextFunction)
+
+		expect(res.status).toHaveBeenCalledWith(500)
+		expect(res.json).toHaveBeenCalledWith({
+			code: 'INTERNAL_ERROR',
+			message: 'Internal server error',
 		})
+		expect(mockLogError).toHaveBeenCalled()
 	})
 })

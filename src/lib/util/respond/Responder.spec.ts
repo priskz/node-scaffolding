@@ -1,292 +1,116 @@
-import { expect } from 'chai'
-import { NextFunction } from 'express'
-import mocks from 'node-mocks-http'
-import { Responder } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Responder } from './Responder'
+import type { Request, Response, NextFunction } from 'express'
 
-//----- Tests -----//
+function mockRes()
+{
+	const res = {
+		status: vi.fn().mockReturnThis(),
+		json: vi.fn().mockReturnThis(),
+		send: vi.fn().mockReturnThis(),
+		setHeader: vi.fn().mockReturnThis(),
+	}
+	return res
+}
 
-describe('util/Responder', () => {
-	describe('when constructor is called', () => {
-		it('should create a new instace of Responder', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
+describe('lib/util/respond/Responder', () =>
+{
+	let req: Request
+	let res: ReturnType<typeof mockRes>
+	let next: NextFunction
 
-			// Test
-			const responder = new Responder(request, response)
+	beforeEach(() =>
+	{
+		req = {} as Request
+		res = mockRes()
+		next = vi.fn() as unknown as NextFunction
+	})
 
-			// Assertions
-			expect(responder).to.be.an.instanceOf(Responder)
+	describe('success', () =>
+	{
+		it('should send 200 when data is provided', () =>
+		{
+			new Responder(req, res as unknown as Response).success({ ok: true })
+
+			expect(res.status).toHaveBeenCalledWith(200)
+			expect(res.json).toHaveBeenCalledWith({ ok: true })
+		})
+
+		it('should flip 200 to 204 when no data is provided', () =>
+		{
+			new Responder(req, res as unknown as Response).success()
+
+			expect(res.status).toHaveBeenCalledWith(204)
+			expect(res.json).toHaveBeenCalledWith(undefined)
+		})
+
+		it('should respect an explicit non-200 success code even without data', () =>
+		{
+			new Responder(req, res as unknown as Response).success(undefined, 201)
+
+			expect(res.status).toHaveBeenCalledWith(201)
+		})
+
+		it('should invoke next when configured', () =>
+		{
+			new Responder(req, res as unknown as Response, next).success({ ok: true })
+
+			expect(next).toHaveBeenCalled()
 		})
 	})
 
-	describe('when success is called with NO data', () => {
-		it('should create 204 response', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
+	describe('error', () =>
+	{
+		it('should default to 400', () =>
+		{
+			new Responder(req, res as unknown as Response).error({ msg: 'bad' })
 
-			// Test
-			const responder = new Responder(request, response)
+			expect(res.status).toHaveBeenCalledWith(400)
+			expect(res.json).toHaveBeenCalledWith({ msg: 'bad' })
+		})
 
-			// Use function
-			responder.success()
+		it('should accept a custom error code', () =>
+		{
+			new Responder(req, res as unknown as Response).error('unauthorized', 401)
 
-			// Assertions
-			expect(response.statusCode).to.equal(204)
+			expect(res.status).toHaveBeenCalledWith(401)
 		})
 	})
 
-	describe('when success is called WITH data', () => {
-		it('should create 200 response with data', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
+	describe('exception', () =>
+	{
+		it('should default to 500', () =>
+		{
+			new Responder(req, res as unknown as Response).exception('boom')
 
-			// Response body
-			const data = { testProp: 'testValue' }
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.success(data)
-
-			// Assertions
-			expect(response.statusCode).to.equal(200)
-			expect(response._getJSONData().testProp).to.equal(data.testProp)
+			expect(res.status).toHaveBeenCalledWith(500)
+			expect(res.json).toHaveBeenCalledWith('boom')
 		})
 	})
 
-	describe('when succcess is called with code argument', () => {
-		it('should create response with given status code ', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-			const code = 202
+	describe('redirect', () =>
+	{
+		it('should default to 302 and set Location', () =>
+		{
+			new Responder(req, res as unknown as Response).redirect('/somewhere')
 
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.success(undefined, code)
-
-			// Assertions
-			expect(response.statusCode).to.equal(code)
+			expect(res.setHeader).toHaveBeenCalledWith('Location', '/somewhere')
+			expect(res.status).toHaveBeenCalledWith(302)
+			expect(res.send).toHaveBeenCalled()
 		})
-	})
 
-	describe('when error is called with NO data', () => {
-		it('should create 400 response', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
+		it('should use 301 when permanent=true', () =>
+		{
+			new Responder(req, res as unknown as Response).redirect('/perm', true)
 
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.error()
-
-			// Assertions
-			expect(response.statusCode).to.equal(400)
+			expect(res.status).toHaveBeenCalledWith(301)
 		})
-	})
 
-	describe('when error is called WITH data', () => {
-		it('should create 400 response with data', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
+		it('should invoke next when configured', () =>
+		{
+			new Responder(req, res as unknown as Response, next).redirect('/x')
 
-			// Response body
-			const data = { testProp: 'testValue' }
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.error(data)
-
-			// Assertions
-			expect(response.statusCode).to.equal(400)
-			expect(response._getJSONData().testProp).to.equal(data.testProp)
-		})
-	})
-
-	describe('when error is called with code argument', () => {
-		it('should create response with given status code ', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-			const code = 422
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.error(undefined, code)
-
-			// Assertions
-			expect(response.statusCode).to.equal(code)
-		})
-	})
-
-	describe('when exception is called with NO data', () => {
-		it('should create 500 response', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.exception()
-
-			// Assertions
-			expect(response.statusCode).to.equal(500)
-		})
-	})
-
-	describe('when exception is called WITH data', () => {
-		it('should create 500 response with body', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-
-			// Response body
-			const data = { testProp: 'testValue' }
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.exception(data)
-
-			// Assertions
-			expect(response.statusCode).to.equal(500)
-			expect(response._getJSONData().testProp).to.equal(data.testProp)
-		})
-	})
-
-	describe('when exception is called with code argument', () => {
-		it('should create response with given status code ', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-			const code = 502
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.exception(undefined, code)
-
-			// Assertions
-			expect(response.statusCode).to.equal(code)
-		})
-	})
-
-	describe('when redirect is called', () => {
-		it('should create temporary 302 response', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-
-			// Redirect url
-			const url = '/somewhere-else'
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.redirect(url)
-
-			// Assertions
-			expect(response.statusCode).to.equal(302)
-			expect(response.header('Location')).to.equal(url)
-		})
-	})
-
-	describe('when redirect is called with optional permanent flag', () => {
-		it('should create permanent 301 response', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-
-			// Redirect url
-			const url = '/somewhere-else'
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.redirect(url, true)
-
-			// Assertions
-			expect(response.statusCode).to.equal(301)
-			expect(response.header('Location')).to.equal(url)
-		})
-	})
-
-	describe('when redirect is called and has Responder has next defined', () => {
-		it('should create permanent 301 response && after middleware should be ran', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-
-			// Redirect url
-			const url = '/somewhere-else'
-
-			// Test
-			const responder = new Responder(request, response, () => {})
-
-			// Use function
-			responder.redirect(url, true)
-
-			// Assertions
-			expect(response.statusCode).to.equal(301)
-			expect(response.header('Location')).to.equal(url)
-		})
-	})
-
-	describe('when send is given a valid http code', () => {
-		it('should create response with given http code', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.send(418)
-
-			// Assertions
-			expect(response.statusCode).to.equal(418)
-			expect(response._getData()).to.be.empty
-		})
-	})
-
-	describe('when send is given a valid http code WITH data', () => {
-		it('should create response with given http code and data', async () => {
-			// Mocks
-			const request = mocks.createRequest()
-			const response = mocks.createResponse()
-
-			// Response body
-			const data = { testProp: 'testValue' }
-
-			// Test
-			const responder = new Responder(request, response)
-
-			// Use function
-			responder.send(418, data)
-
-			// Assertions
-			expect(response.statusCode).to.equal(418)
-			expect(response._getJSONData().testProp).to.equal(data.testProp)
+			expect(next).toHaveBeenCalled()
 		})
 	})
 })

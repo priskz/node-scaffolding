@@ -1,99 +1,87 @@
-import { expect } from 'chai'
-import { AxiosResponse } from 'axios'
-import { appRequest } from '~/test/util'
-import { MockSession, MockUser } from '~/test/mocks'
-import { getSessionIdFromHeader } from '~/test/util'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Tests -----//
+const { mockLogout } = vi.hoisted(() => ({
+	mockLogout: vi.fn(),
+}))
 
-describe('api/auth/logout', () => {
-	// Guest user data
-	let guestData = MockUser.guest()
+vi.mock('~/lib/util', () => ({
+	respond: (_req: unknown, res: { status: (n: number) => unknown; json: (d: unknown) => unknown }) => ({
+		success: (data?: unknown, code: number = 200) =>
+		{
+			res.status(code === 200 && data === undefined ? 204 : code)
+			res.json(data)
+		},
+		error: (data?: unknown, code: number = 400) =>
+		{
+			res.status(code)
+			res.json(data)
+		},
+	}),
+}))
 
-	let register: AxiosResponse
+vi.mock('~/config', () => ({
+	config: { session: { cookie: 'sid' } },
+}))
 
-	let registerSessionId: string
+vi.mock('~/app/service', () => ({
+	AuthRoot: class
+	{
+		public logout(session: unknown) { return mockLogout(session) }
+	},
+}))
 
-	before(async () => {
-		// Register a user
-		register = await appRequest.post('/auth/register', {
-			...guestData,
-			pass: guestData.password
-		})
+import { logout } from './logout'
+import type { Request, Response } from 'express'
 
-		// Extract session id
-		registerSessionId = getSessionIdFromHeader(
-			register.headers['set-cookie'][0]
-		)
+function mockRes()
+{
+	return {
+		status: vi.fn().mockReturnThis(),
+		json: vi.fn().mockReturnThis(),
+		clearCookie: vi.fn().mockReturnThis(),
+	}
+}
+
+describe('app/api/auth/logout', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Clean up
-		await MockSession.destroy(registerSessionId)
-		await MockUser.destroyByEmail(guestData.email)
+	it('should 400 when request has no session', async () =>
+	{
+		const req = { getSession: () => undefined }
+		const res = mockRes()
+
+		await logout(req as unknown as Request, res as unknown as Response)
+
+		expect(mockLogout).not.toHaveBeenCalled()
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 
-	describe('valid cookie is provided', () => {
-		it('should return 204 No Content', async () => {
-			// Get cookie from register
-			const cookie = MockSession.getCookie(registerSessionId)
+	it('should 400 when session has no userId (not logged in)', async () =>
+	{
+		const req = { getSession: () => ({ id: 'sid', userId: null }) }
+		const res = mockRes()
 
-			// Log user in
-			await appRequest.post(
-				'/auth/login',
-				{
-					email: guestData.email,
-					pass: guestData.password
-				},
-				{
-					headers: { cookie }
-				}
-			)
+		await logout(req as unknown as Request, res as unknown as Response)
 
-			// Test
-			const result: AxiosResponse = await appRequest.post(
-				'/auth/logout',
-				{},
-				{
-					headers: { cookie }
-				}
-			)
-
-			// Assertions
-			expect(result.status).to.equal(204)
-		})
+		expect(mockLogout).not.toHaveBeenCalled()
+		expect(res.status).toHaveBeenCalledWith(400)
 	})
 
-	describe('session cookie is not provided', () => {
-		it('should return 400 Bad Request', async () => {
-			// Get cookie from register
-			const cookie = MockSession.getCookie(registerSessionId)
+	it('should expire session, clear cookie, and respond 204 on success', async () =>
+	{
+		mockLogout.mockResolvedValue(true)
 
-			// Log user in
-			await appRequest.post(
-				'/auth/login',
-				{
-					email: guestData.email,
-					pass: guestData.password
-				},
-				{
-					headers: { cookie }
-				}
-			)
+		const req = { getSession: () => ({ id: 'sid', userId: 1 }) }
+		const res = mockRes()
 
-			// Test
-			const result: AxiosResponse = await appRequest.post('/auth/logout')
+		await logout(req as unknown as Request, res as unknown as Response)
 
-			// Extract new session id
-			const newSessionId = getSessionIdFromHeader(
-				result.headers['set-cookie'][0]
-			)
-
-			// Clean up
-			await MockSession.destroy(newSessionId)
-
-			// Assertions
-			expect(result.status).to.equal(400)
-		})
+		expect(mockLogout).toHaveBeenCalledWith({ id: 'sid', userId: 1 })
+		expect(res.clearCookie).toHaveBeenCalledWith('sid')
+		expect(res.status).toHaveBeenCalledWith(204)
 	})
 })

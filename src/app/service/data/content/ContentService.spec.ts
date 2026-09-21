@@ -1,54 +1,120 @@
-import { expect } from 'chai'
-import { MockContent } from '~/test/mocks'
-import { Content } from '~/app/domain'
-import { ContentService } from './'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-//----- Data -----//
+const mockGetOne = vi.fn()
+const mockSearchReplace = vi.fn()
 
-let service: ContentService
+vi.mock('~/lib/service/DataService', () => ({
+	DataService: class
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		protected repository: any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		constructor(repository: any) { this.repository = repository }
+		public getOne(query: unknown) { return mockGetOne(query) }
+	},
+}))
 
-//----- Tests -----//
+vi.mock('~/app/domain', () => ({
+	ContentRepository: class {},
+	ContentSearch: class
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		constructor(_opts?: any) {}
+		public replace(id: string, content: unknown) { return mockSearchReplace(id, content) }
+	},
+}))
 
-describe('app/service/data/content/ContentService', () => {
-	before(async () => {
-		// Add seed data
-		await MockContent.addSeeds()
+vi.mock('~/config', () => ({
+	config: { search: { index: { default: 'test-index' } } },
+}))
+
+import { ContentService } from './ContentService'
+
+describe('app/service/data/content/ContentService', () =>
+{
+	beforeEach(() =>
+	{
+		vi.clearAllMocks()
 	})
 
-	after(async () => {
-		// Delete seed data
-		await MockContent.removeSeeds()
+	it('should construct with a ContentRepository and ContentSearch', () =>
+	{
+		const service = new ContentService()
+		expect(service).toBeInstanceOf(ContentService)
 	})
 
-	describe('constructor method', () => {
-		it('should return new instance of ContentService', async () => {
-			// Test
-			service = new ContentService()
+	it('should throw when default search index is not configured', async () =>
+	{
+		vi.resetModules()
+		vi.doMock('~/config', () => ({
+			config: { search: { index: { default: '' } } },
+		}))
+		vi.doMock('~/lib/service/DataService', () => ({
+			DataService: class { constructor(_repo: unknown) {} },
+		}))
+		vi.doMock('~/app/domain', () => ({
+			ContentRepository: class {},
+			ContentSearch: class {},
+		}))
 
-			// Assertions
-			expect(service).to.be.an.instanceOf(ContentService)
+		const { ContentService: Svc } = await import('./ContentService')
+		expect(() => new Svc()).toThrow(/index prop not configured/)
+	})
+
+	describe('getOneById', () =>
+	{
+		it('should delegate to getOne filtered by id', async () =>
+		{
+			const content = { id: 'c1', title: 'T' }
+			mockGetOne.mockResolvedValue(content)
+
+			const service = new ContentService()
+			const result = await service.getOneById('c1')
+
+			expect(result).toBe(content)
+			expect(mockGetOne).toHaveBeenCalledWith({ where: { id: 'c1' } })
 		})
 	})
 
-	describe('getOneById method', () => {
-		it('if found should return Content', async () => {
-			const seed = MockContent.getSeeds()[0]
+	describe('updateSearchIndex', () =>
+	{
+		it('should return false when content not found', async () =>
+		{
+			mockGetOne.mockResolvedValue(undefined)
 
-			// Test
-			const result = await service.getOneById(seed.id as string)
+			const service = new ContentService()
+			const ok = await service.updateSearchIndex('missing')
 
-			// Assertions
-			expect(result)
-				.to.have.property('id')
-				.to.equal(seed.id as string)
+			expect(ok).toBe(false)
+			expect(mockSearchReplace).not.toHaveBeenCalled()
 		})
 
-		it('if NOT found should return undefined', async () => {
-			// Test
-			const reuslt = await service.getOneById('id-does-not-exist-in-db')
+		it('should return true when replace succeeds', async () =>
+		{
+			const content = { id: 'c1', title: 'T' }
+			mockGetOne.mockResolvedValue(content)
+			mockSearchReplace.mockResolvedValue(true)
 
-			// Assertions
-			expect(reuslt).to.be.undefined
+			const service = new ContentService()
+			const ok = await service.updateSearchIndex('c1')
+
+			expect(ok).toBe(true)
+			expect(mockSearchReplace).toHaveBeenCalledWith('c1', content)
+		})
+
+		it('should return false when replace fails', async () =>
+		{
+			const content = { id: 'c1', title: 'T' }
+			mockGetOne.mockResolvedValue(content)
+			mockSearchReplace.mockResolvedValue(false)
+
+			const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+			const service = new ContentService()
+			const ok = await service.updateSearchIndex('c1')
+
+			expect(ok).toBe(false)
+			errSpy.mockRestore()
 		})
 	})
 })

@@ -1,4 +1,3 @@
-import { getCustomRepository } from 'typeorm'
 import { DataService } from '~/lib/service/DataService'
 import { Content, ContentRepository, ContentSearch } from '~/app/domain'
 import { config } from '~/config'
@@ -19,13 +18,13 @@ export class ContentService extends DataService<Content> {
 	 */
 	constructor() {
 		// Set repository prop via parent
-		super(getCustomRepository(ContentRepository))
+		super(new ContentRepository())
 
 		// Set index
 		this.index = config.search.index.default
 
-		// Throw if no index configured1
-		if (!this.index) throw Error("ContentService's index prop not configured")
+		// No index?
+		if( ! this.index) throw Error("ContentService's index prop not configured")
 
 		// Init Search
 		this.search = new ContentSearch({ index: this.index })
@@ -45,21 +44,21 @@ export class ContentService extends DataService<Content> {
 		// Get source
 		const source = await this.getOneById(id)
 
-		// Replace if succesful
-		if (!source) return false
+		// Not found?
+		if( ! source) return false
 
-		// Update index value
+		// Update index
 		const replaced = await this.search.replace(source.id, source)
 
-		// Log if not updated
-		if (!replaced) {
+		// Failed?
+		if( ! replaced) {
 			console.error('Could not update search index', {
 				index: this.index,
 				id: source.id
 			})
 		}
 
-		// Return bool
+		// Return
 		return replaced
 	}
 }
